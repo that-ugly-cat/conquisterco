@@ -2,7 +2,9 @@
 
 const T = window.T || {};
 
-const map = L.map("map", { zoomControl: true }).setView([45.9, 11.3], 8);
+// preferCanvas: i poligoni si ridisegnano sul movimento (niente sparizioni al
+// pan fuori/dentro viewport) e rende meglio su mobile.
+const map = L.map("map", { zoomControl: true, preferCanvas: true }).setView([45.9, 11.3], 8);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap", maxZoom: 18,
 }).addTo(map);
@@ -64,14 +66,15 @@ async function loadAreas(force) {
       : (f.owner_name ? `<b>${esc(f.owner_name)}</b>` : T.nobody);
     const link = level === "comune"
       ? `<br><a href="#" onclick="showTerritory(${f.osm_id});return false;">${T.details}</a>` : "";
-    gj.bindPopup(`<b>${esc(f.name)}</b><br>${T.owner}: ${owner} (${f.count} ${unit})${link}`);
+    const popup = `<b>${esc(f.name)}</b><br>${T.owner}: ${owner} (${f.count} ${unit})${link}`;
+    gj.bindPopup(popup);
     areaLayer.addLayer(gj);
 
     if (f.centroid) {
       const icon = (f.owner_flag && !f.is_contested)
         ? L.divIcon({ className: "", html: `<img class="flag-pin" src="${f.owner_flag}">`, iconSize: [28, 28], iconAnchor: [14, 28] })
         : pinIcon(f.owner_color, f.is_contested ? "?" : (f.owner_name ? f.owner_name[0] : "·"), f.is_contested);
-      flagLayer.addLayer(L.marker(f.centroid, { icon }));
+      flagLayer.addLayer(L.marker(f.centroid, { icon }).bindPopup(popup));  // pin cliccabile come il poligono
     }
   }
 }
