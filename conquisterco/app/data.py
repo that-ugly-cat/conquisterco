@@ -133,6 +133,22 @@ def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
     return out
 
 
+def achievements(conn: sqlite3.Connection) -> list[dict]:
+    """Legenda dei badge: nome, descrizione, icona + quanti li hanno presi."""
+    return [
+        {"code": r["code"], "name": r["name"], "description": r["description"],
+         "icon": r["icon_ref"], "type": r["type"], "holders": r["holders"]}
+        for r in conn.execute(
+            """SELECT a.code, a.name, a.description, a.icon_ref, a.type,
+                      COUNT(DISTINCT w.user_id) AS holders
+               FROM achievements a
+               LEFT JOIN awards w ON w.achievement_id = a.id
+               WHERE a.active = 1
+               GROUP BY a.id ORDER BY a.name"""
+        )
+    ]
+
+
 def territory_detail(conn: sqlite3.Connection, osm_id: int) -> dict:
     names = {r["id"]: r["display_name"] for r in conn.execute("SELECT id, display_name FROM users")}
     t = conn.execute("SELECT * FROM territories WHERE osm_id=?", (osm_id,)).fetchone()

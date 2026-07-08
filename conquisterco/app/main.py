@@ -7,7 +7,7 @@ import secrets
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -25,6 +25,7 @@ _default_db = _ROOT / "conquisterco_real.db"
 if not _default_db.exists():
     _default_db = _ROOT / "conquisterco.db"
 DB_PATH = os.environ.get("CONQUISTERCO_DB", str(_default_db))
+MEDIA_DIR = Path(os.environ.get("CONQUISTERCO_MEDIA", str(_ROOT / "media"))).resolve()
 # password condivisa minimale (Fase 4 la sostituirà con utenti/admin veri)
 SHARED_PASSWORD = os.environ.get("CONQUISTERCO_PASSWORD", "cacca")
 DEMO_SEED = os.environ.get("CONQUISTERCO_DEMO", "1") == "1"
@@ -121,6 +122,11 @@ def api_feed(conn=Depends(get_db)):
     return data.feed(conn)
 
 
+@app.get("/api/achievements")
+def api_achievements(conn=Depends(get_db)):
+    return data.achievements(conn)
+
+
 @app.get("/api/territory/{osm_id}")
 def api_territory(osm_id: int, conn=Depends(get_db)):
     return data.territory_detail(conn, osm_id)
@@ -140,6 +146,19 @@ def api_profile(user_id: int, conn=Depends(get_db)):
 def api_dumps(request: Request, conn=Depends(get_db)):
     require_login(request)
     return data.dumps_geo(conn)
+
+
+@app.get("/api/selfie/{deposit_id}")
+def api_selfie(deposit_id: int, request: Request, conn=Depends(get_db)):
+    require_login(request)
+    row = conn.execute("SELECT photo_ref FROM deposits WHERE id=?", (deposit_id,)).fetchone()
+    if row is None or not row["photo_ref"]:
+        raise HTTPException(status_code=404, detail="nessun selfie")
+    path = (MEDIA_DIR / row["photo_ref"]).resolve()
+    # difesa da path traversal: deve restare dentro MEDIA_DIR
+    if not str(path).startswith(str(MEDIA_DIR)) or not path.exists():
+        raise HTTPException(status_code=404, detail="file non trovato")
+    return FileResponse(path)
 
 
 def serve() -> None:

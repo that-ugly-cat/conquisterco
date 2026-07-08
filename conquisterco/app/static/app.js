@@ -103,7 +103,8 @@ async function loadDumps() {
       icon: L.divIcon({ className: "dump-pin", html: "💩", iconSize: [20, 20] }),
     });
     const selfie = d.has_photo
-      ? `<div class="selfie">📸</div>`
+      ? `<img class="selfie-img" src="/api/selfie/${d.id}" alt="selfie"
+             onerror="this.outerHTML='&lt;div class=&quot;selfie&quot;&gt;🐰&lt;/div&gt;'">`
       : `<div class="selfie" title="nessun selfie">🐰</div>`;
     const alt = d.altitude != null ? `${Math.round(d.altitude)} m` : "?";
     m.bindPopup(`${selfie}<div style="margin-top:.4rem"><b>${esc(d.user_name)}</b><br>`
@@ -171,6 +172,17 @@ async function loadPanels() {
   $("#tab-feed").innerHTML = feed.map((f) =>
     `<div class="feed-item ${f.kind}"><span class="ts">${esc(f.ts.slice(0, 10))}</span>${esc(f.text)}</div>`
   ).join("");
+
+  // legenda achievement (spiegazione dei badge)
+  const badges = await fetch("/api/achievements").then((r) => r.json());
+  $("#tab-badge").innerHTML =
+    `<p class="hint">Come si sbloccano i badge. Il ? sulla mappa è un territorio <b>conteso</b> (parità): vale zero finché nessuno supera.</p>`
+    + badges.map((b) =>
+        `<div class="badge-row"><div class="badge-ic">${b.icon || "🏅"}</div>`
+        + `<div><b>${esc(b.name)}</b>`
+        + `<span class="badge-holders">${b.holders ? "· " + b.holders + " l'hanno preso" : "· nessuno ancora"}</span>`
+        + `<div class="badge-desc">${esc(b.description || "")}</div></div></div>`
+      ).join("");
 }
 
 function fmtVal(v) {
