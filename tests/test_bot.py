@@ -4,6 +4,9 @@ from conquisterco.geo_osm import Resolution, Unit
 
 from .conftest import mkuser
 
+# niente chiamate di rete per la quota nei test
+bot._elevate = lambda conn: None
+
 
 class FakeTG:
     def __init__(self):

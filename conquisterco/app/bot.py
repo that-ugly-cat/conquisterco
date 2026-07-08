@@ -21,10 +21,14 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
+from ..elevation import enrich_altitude
 from ..enrich_osm import enrich_deposits_osm
 from ..ingest import add_deposit
 from ..pipeline import finalize
 from ..util import parse_ts
+
+# indirezione per iniettare l'enrich altitudine nei test (evita chiamate di rete)
+_elevate = enrich_altitude
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
@@ -188,6 +192,7 @@ def _handle_location(conn, msg: dict, client, resolver, media_dir) -> None:
     conn.commit()
 
     enrich_deposits_osm(conn, resolver)
+    _elevate(conn)            # quota da DEM (open-meteo)
     finalize(conn)
     client.send_message(msg["chat"]["id"], f"💩 registrato: {_comune_of(conn, did) or '??'}")
 
