@@ -1,16 +1,29 @@
 "use strict";
 
-const map = L.map("map", { zoomControl: true }).setView([48.5, 12], 4);
+const map = L.map("map", { zoomControl: true }).setView([45.9, 11.3], 8);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap", maxZoom: 18,
 }).addTo(map);
 
-const territoryLayer = L.layerGroup().addTo(map);
+const areaLayer = L.layerGroup().addTo(map);   // poligoni coropletici
+const flagLayer = L.layerGroup().addTo(map);   // bandierine ai centroidi
 const dumpLayer = L.layerGroup();
+let mode = "territori";
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function levelForZoom(z) {
+  if (z <= 4) return "country";
+  if (z <= 6) return "region";
+  if (z <= 8) return "province";
+  return "comune";
+}
+
+function ownerColor(f) {
+  return f.is_contested || !f.owner_color ? "#9a8f82" : f.owner_color;
+}
 
 function pinIcon(color, label, contested) {
   const bg = contested ? "#9a8f82" : (color || "#6F4E37");
@@ -21,23 +34,62 @@ function pinIcon(color, label, contested) {
   });
 }
 
-// ---- Mappa: territori ----------------------------------------------------
-async function loadTerritories() {
+// ---- Mappa: aree (coropletica + LOD) -------------------------------------
+let currentLevel = null;
+
+async function loadAreas(force) {
+  const level = levelForZoom(map.getZoom());
+  if (!force && level === currentLevel) return;
+  currentLevel = level;
+
+  const feats = await fetch("/api/map/areas?level=" + level).then((r) => r.json());
+  areaLayer.clearLayers();
+  flagLayer.clearLayers();
+
+  if (!feats.length) {              // DB demo (niente geometrie) → marker di ripiego
+    if (level === "comune") loadFallbackMarkers();
+    return;
+  }
+
+  const unit = level === "comune" ? "💩" : "comuni";
+  for (const f of feats) {
+    const gj = L.geoJSON(
+      { type: "Feature", geometry: f.geometry, properties: f },
+      {
+        style: {
+          color: "#fff", weight: 1, fillColor: ownerColor(f),
+          fillOpacity: f.owner_id ? 0.55 : 0.25,
+        },
+      }
+    );
+    const owner = f.is_contested ? "<i>conteso</i>"
+      : (f.owner_name ? `<b>${esc(f.owner_name)}</b>` : "nessuno");
+    const link = level === "comune"
+      ? `<br><a href="#" onclick="showTerritory(${f.osm_id});return false;">dettaglio →</a>` : "";
+    gj.bindPopup(`<b>${esc(f.name)}</b><br>owner: ${owner} (${f.count} ${unit})${link}`);
+    areaLayer.addLayer(gj);
+
+    if (f.centroid) {
+      const label = f.is_contested ? "?" : (f.owner_name ? f.owner_name[0] : "·");
+      flagLayer.addLayer(L.marker(f.centroid, { icon: pinIcon(f.owner_color, label, f.is_contested) }));
+    }
+  }
+}
+
+async function loadFallbackMarkers() {
   const rows = await fetch("/api/map/territories").then((r) => r.json());
-  territoryLayer.clearLayers();
   for (const t of rows) {
     const label = t.is_contested ? "?" : (t.owner_name ? t.owner_name[0] : "·");
     const m = L.marker([t.lat, t.lon], { icon: pinIcon(t.owner_color, label, t.is_contested) });
     const owner = t.is_contested ? "<i>conteso</i>"
       : (t.owner_name ? `<b>${esc(t.owner_name)}</b>` : "nessuno");
-    m.bindPopup(
-      `<b>${esc(t.name)}</b><br>${esc(t.country || "")} · ${t.area_km2 || "?"} km²<br>`
-      + `owner: ${owner} (${t.top_count} 💩)<br>`
-      + `<a href="#" onclick="showTerritory(${t.osm_id});return false;">dettaglio →</a>`
-    );
-    territoryLayer.addLayer(m);
+    m.bindPopup(`<b>${esc(t.name)}</b><br>owner: ${owner} (${t.top_count} 💩)<br>`
+      + `<a href="#" onclick="showTerritory(${t.osm_id});return false;">dettaglio →</a>`);
+    flagLayer.addLayer(m);
   }
 }
+
+map.on("zoomend", () => { if (mode === "territori") loadAreas(false); });
 
 // ---- Mappa: dump (gated) -------------------------------------------------
 async function loadDumps() {
@@ -54,8 +106,7 @@ async function loadDumps() {
       ? `<div class="selfie">📸</div>`
       : `<div class="selfie" title="nessun selfie">🐰</div>`;
     const alt = d.altitude != null ? `${Math.round(d.altitude)} m` : "?";
-    m.bindPopup(
-      `${selfie}<div style="margin-top:.4rem"><b>${esc(d.user_name)}</b><br>`
+    m.bindPopup(`${selfie}<div style="margin-top:.4rem"><b>${esc(d.user_name)}</b><br>`
       + `${esc(d.ts)}<br>quota ${alt}</div>`, { maxWidth: 220 });
     dumpLayer.addLayer(m);
   }
@@ -65,20 +116,20 @@ async function loadDumps() {
 $("#btn-territori").onclick = () => setMode("territori");
 $("#btn-dump").onclick = () => setMode("dump");
 
-function setMode(mode) {
-  const terr = mode === "territori";
+function setMode(m) {
+  const terr = m === "territori";
+  if (!terr && !window.LOGGED) {
+    alert("I pin dei dump sono visibili solo dopo il login.");
+    return;
+  }
+  mode = m;
   $("#btn-territori").classList.toggle("active", terr);
   $("#btn-dump").classList.toggle("active", !terr);
   if (terr) {
-    map.addLayer(territoryLayer); map.removeLayer(dumpLayer);
+    map.addLayer(areaLayer); map.addLayer(flagLayer); map.removeLayer(dumpLayer);
+    loadAreas(true);
   } else {
-    map.removeLayer(territoryLayer);
-    if (!window.LOGGED) {
-      alert("I pin dei dump sono visibili solo dopo il login.");
-      setMode("territori");
-      return;
-    }
-    map.addLayer(dumpLayer);
+    map.removeLayer(areaLayer); map.removeLayer(flagLayer); map.addLayer(dumpLayer);
   }
 }
 
@@ -94,7 +145,6 @@ document.querySelectorAll(".tabs button").forEach((b) => {
 
 async function loadPanels() {
   const lb = await fetch("/api/leaderboard").then((r) => r.json());
-  // classifica principale
   let h = "<table><tr><th>#</th><th>Giocatore</th><th class='num'>comuni</th><th class='num'>km²</th></tr>";
   lb.main.forEach((row, i) => {
     h += `<tr><td>${i + 1}</td><td><span class="swatch" style="background:${esc(row.color || '#6F4E37')}"></span>`
@@ -103,7 +153,6 @@ async function loadPanels() {
   });
   $("#tab-classifica").innerHTML = h + "</table>";
 
-  // record
   const labels = {
     nord: "Più a Nord", sud: "Più a Sud", est: "Più a Est", ovest: "Più a Ovest",
     piu_in_alto: "Più in alto", piu_in_basso: "Più in basso", trasferta: "Trasferta",
@@ -118,7 +167,6 @@ async function loadPanels() {
   }
   $("#tab-record").innerHTML = r;
 
-  // feed
   const feed = await fetch("/api/feed").then((r) => r.json());
   $("#tab-feed").innerHTML = feed.map((f) =>
     `<div class="feed-item ${f.kind}"><span class="ts">${esc(f.ts.slice(0, 10))}</span>${esc(f.text)}</div>`
@@ -161,6 +209,6 @@ window.closeModal = () => $("#modal").classList.add("hidden");
 $("#modal").onclick = (e) => { if (e.target.id === "modal") closeModal(); };
 
 // ---- Boot ----------------------------------------------------------------
-loadTerritories();
+loadAreas(true);
 loadDumps();
 loadPanels();

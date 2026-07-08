@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 
 from ..leaderboards import main_leaderboard, records
@@ -42,6 +43,46 @@ def territories_geo(conn: sqlite3.Connection) -> list[dict]:
             "owner_id": r["uid"],
             "owner_name": owner["display_name"] if owner else None,
             "owner_color": owner["color"] if owner else None,
+        })
+    return out
+
+
+def areas(conn: sqlite3.Connection, level: str) -> list[dict]:
+    """Aree con geometria per un livello del LOD: 'comune' (da territories +
+    territory_ownership) o 'province'/'region'/'country' (da admin_units +
+    aggregate_ownership). Ritorna Feature-like con geometria GeoJSON."""
+    users = _names(conn)
+    if level == "comune":
+        rows = conn.execute(
+            """SELECT t.osm_id, t.name, t.centroid_lat clat, t.centroid_lon clon,
+                      t.geometry_geojson geo, o.owner_user_id uid, o.is_contested c,
+                      o.top_count cnt
+               FROM territories t
+               LEFT JOIN territory_ownership o ON o.territory_osm_id = t.osm_id
+               WHERE t.geometry_geojson IS NOT NULL"""
+        )
+    else:
+        rows = conn.execute(
+            """SELECT a.osm_id, a.name, a.centroid_lat clat, a.centroid_lon clon,
+                      a.geometry_geojson geo, g.owner_user_id uid, g.is_contested c,
+                      g.comuni_owned cnt
+               FROM admin_units a
+               LEFT JOIN aggregate_ownership g ON g.unit_osm_id = a.osm_id
+               WHERE a.kind = ? AND a.geometry_geojson IS NOT NULL""",
+            (level,),
+        )
+    out = []
+    for r in rows:
+        owner = users.get(r["uid"]) if r["uid"] else None
+        out.append({
+            "osm_id": r["osm_id"], "name": r["name"], "level": level,
+            "centroid": [r["clat"], r["clon"]] if r["clat"] is not None else None,
+            "geometry": json.loads(r["geo"]),
+            "owner_id": r["uid"],
+            "owner_name": owner["display_name"] if owner else None,
+            "owner_color": owner["color"] if owner else None,
+            "is_contested": bool(r["c"]),
+            "count": r["cnt"] or 0,
         })
     return out
 

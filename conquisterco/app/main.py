@@ -19,7 +19,12 @@ from ..seed import build_world, seed_deposits
 from . import data
 
 APP_DIR = Path(__file__).resolve().parent
-DB_PATH = os.environ.get("CONQUISTERCO_DB", str(APP_DIR.parent.parent / "conquisterco.db"))
+_ROOT = APP_DIR.parent.parent
+# se esiste il DB coi dati storici lo si preferisce, altrimenti il DB demo
+_default_db = _ROOT / "conquisterco_real.db"
+if not _default_db.exists():
+    _default_db = _ROOT / "conquisterco.db"
+DB_PATH = os.environ.get("CONQUISTERCO_DB", str(_default_db))
 # password condivisa minimale (Fase 4 la sostituirà con utenti/admin veri)
 SHARED_PASSWORD = os.environ.get("CONQUISTERCO_PASSWORD", "cacca")
 DEMO_SEED = os.environ.get("CONQUISTERCO_DEMO", "1") == "1"
@@ -97,6 +102,13 @@ def api_me(request: Request):
 @app.get("/api/map/territories")
 def api_territories(conn=Depends(get_db)):
     return data.territories_geo(conn)
+
+
+@app.get("/api/map/areas")
+def api_areas(level: str = "comune", conn=Depends(get_db)):
+    if level not in ("comune", "province", "region", "country"):
+        raise HTTPException(status_code=400, detail="livello non valido")
+    return data.areas(conn, level)
 
 
 @app.get("/api/leaderboard")

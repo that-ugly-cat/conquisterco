@@ -14,6 +14,7 @@ import json
 import sqlite3
 
 from .geo_osm import OSMResolver, Resolution, Unit
+from .geoarea import geojson_area_km2
 
 
 def _upsert_admin_unit(conn: sqlite3.Connection, u: Unit, parent_osm_id: int | None) -> None:
@@ -41,23 +42,25 @@ def _persist(conn: sqlite3.Connection, res: Resolution) -> None:
     c = res.comune
     if c is None:
         return
+    area = geojson_area_km2(json.loads(c.geometry)) if c.geometry else None
     conn.execute(
         """INSERT INTO territories
              (osm_id, name, admin_level, country, region, province,
               province_osm_id, region_osm_id, country_osm_id,
-              centroid_lat, centroid_lon, geometry_geojson)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+              area_km2, centroid_lat, centroid_lon, geometry_geojson)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(osm_id) DO UPDATE SET
              name=excluded.name, country=excluded.country, region=excluded.region,
              province=excluded.province, province_osm_id=excluded.province_osm_id,
              region_osm_id=excluded.region_osm_id, country_osm_id=excluded.country_osm_id,
+             area_km2=excluded.area_km2,
              centroid_lat=excluded.centroid_lat, centroid_lon=excluded.centroid_lon,
              geometry_geojson=COALESCE(excluded.geometry_geojson, territories.geometry_geojson)""",
         (c.osm_id, c.name, 8, c.country, c.region, c.province,
          res.province.osm_id if res.province else None,
          res.region.osm_id if res.region else None,
          res.country.osm_id if res.country else None,
-         c.lat, c.lon, c.geometry),
+         area, c.lat, c.lon, c.geometry),
     )
 
 
