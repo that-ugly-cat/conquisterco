@@ -179,7 +179,27 @@ def my_stats(conn: sqlite3.Connection, uid: int) -> dict | None:
         "badges": prof["badges"], "records": held,
         "activity": monthly_activity(conn, uid),
         "weight_kg": round(c["tot"] * AVG_DUMP_G / 1000.0, 1),
+        "no_selfie": bool(u["no_selfie"]),
+        "selfie_count": conn.execute(
+            "SELECT COUNT(*) FROM deposits WHERE user_id=? AND photo_ref IS NOT NULL",
+            (uid,)).fetchone()[0],
     }
+
+
+def delete_user_selfies(conn: sqlite3.Connection, uid: int, media_dir) -> int:
+    """Rimuove solo i selfie dell'utente (photo_ref → NULL + file), tenendo
+    depositi e conquiste. Non serve recompute (le foto non toccano il gioco)."""
+    from pathlib import Path
+    media_dir = Path(media_dir)
+    refs = [r["photo_ref"] for r in conn.execute(
+        "SELECT photo_ref FROM deposits WHERE user_id=? AND photo_ref IS NOT NULL", (uid,))]
+    conn.execute("UPDATE deposits SET photo_ref=NULL WHERE user_id=?", (uid,))
+    conn.commit()
+    for ref in refs:
+        p = (media_dir / ref).resolve()
+        if str(p).startswith(str(media_dir.resolve())) and p.exists():
+            p.unlink()
+    return len(refs)
 
 
 def monthly_activity(conn: sqlite3.Connection, uid: int, months: int = 12) -> list[dict]:

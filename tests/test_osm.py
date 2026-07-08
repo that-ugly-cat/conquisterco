@@ -2,8 +2,9 @@ import json
 import urllib.parse
 
 from conquisterco.db import fresh_db
-from conquisterco.enrich_osm import enrich_deposits_osm
+from conquisterco.enrich_osm import drop_fallback_territories, enrich_deposits_osm
 from conquisterco.geo_osm import OSMResolver, Resolution, Unit
+from conquisterco.ingest import add_deposit
 from conquisterco.recompute import recompute
 
 from .conftest import mkuser
@@ -35,6 +36,39 @@ def test_resolver_catena_completa():
     assert r.province.osm_id == 45756
     assert r.region.osm_id == 45757
     assert r.country.osm_id == 365331
+
+
+def test_resolver_scarta_addresstype_grosso():
+    # a zoom 10 torna un "country" (punto in mare / paese senza comuni) → nessun comune
+    resp = dict(_RESP)
+    resp[10] = dict(_RESP[10])
+    resp[10]["addresstype"] = "country"
+
+    def fetch(url):
+        q = dict(urllib.parse.parse_qsl(url.split("?", 1)[1]))
+        return json.dumps(resp[int(q["zoom"])]).encode()
+
+    r = OSMResolver(min_interval=0, fetch=fetch).resolve(46.07, 11.12)
+    assert r.comune is None
+
+
+def test_drop_fallback_territories():
+    conn = fresh_db(":memory:")
+    a = mkuser(conn, "A")
+    # unità aggregata (paese) osm_id 999; un "comune" con lo STESSO osm_id = fallback
+    conn.execute("INSERT INTO admin_units (osm_id, kind, name) VALUES (999,'country','X')")
+    conn.execute("INSERT INTO territories (osm_id, name) VALUES (999,'Paese-come-comune')")
+    conn.execute("INSERT INTO territories (osm_id, name) VALUES (1,'Comune vero')")
+    d1 = add_deposit(conn, user_id=a, ts="2024-01-01 10:00:00", lat=1, lon=1, source="telegram")
+    conn.execute("UPDATE deposits SET territory_osm_id=999 WHERE id=?", (d1,))
+    conn.execute("INSERT INTO geocode_cache (lat, lon, comune_osm_id, payload_json) VALUES (1,1,999,'{}')")
+    conn.commit()
+
+    assert drop_fallback_territories(conn) == 1
+    assert conn.execute("SELECT territory_osm_id FROM deposits WHERE id=?", (d1,)).fetchone()[0] is None
+    assert conn.execute("SELECT COUNT(*) FROM territories WHERE osm_id=999").fetchone()[0] == 0
+    assert conn.execute("SELECT comune_osm_id FROM geocode_cache WHERE lat=1 AND lon=1").fetchone()[0] is None
+    assert conn.execute("SELECT COUNT(*) FROM territories WHERE osm_id=1").fetchone()[0] == 1  # il vero resta
 
 
 def test_resolver_dedup_osm_id_ripetuti():

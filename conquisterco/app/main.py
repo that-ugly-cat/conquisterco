@@ -38,12 +38,21 @@ app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="stati
 
 # --- DB -------------------------------------------------------------------
 
+def _migrate(conn) -> None:
+    """Migrazioni leggere additive per DB già esistenti."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
+    if "no_selfie" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN no_selfie INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+
+
 def ensure_db() -> None:
     fresh = not Path(DB_PATH).exists()
     conn = connect(DB_PATH)
     try:
         if fresh:
             init_db(conn)
+        _migrate(conn)
         if DEMO_SEED and conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
             users = build_world(conn)
             seed_deposits(conn, users)
@@ -256,6 +265,22 @@ def me_password(request: Request, current: str = Form(...), new: str = Form(...)
     conn.execute("UPDATE users SET password_hash=? WHERE id=?",
                  (hash_password(new), request.session["uid"]))
     conn.commit()
+    return RedirectResponse("/me", status_code=303)
+
+
+@app.post("/me/selfies")
+def me_selfie_pref(request: Request, no_selfie: str = Form(None), conn=Depends(get_db)):
+    require_login(request)
+    conn.execute("UPDATE users SET no_selfie=? WHERE id=?",
+                 (1 if no_selfie else 0, request.session["uid"]))
+    conn.commit()
+    return RedirectResponse("/me", status_code=303)
+
+
+@app.post("/me/selfies/delete")
+def me_delete_selfies(request: Request, conn=Depends(get_db)):
+    require_login(request)
+    data.delete_user_selfies(conn, request.session["uid"], MEDIA_DIR)
     return RedirectResponse("/me", status_code=303)
 
 

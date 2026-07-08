@@ -77,6 +77,20 @@
         </div>
       </section>
 
+      <!-- Selfie -->
+      <section class="card">
+        <h2>Selfie</h2>
+        <form method="post" action="/me/selfies" class="stacked">
+          <label class="chk"><input type="checkbox" name="no_selfie" {% if s.no_selfie %}checked{% endif %}> Non salvare i miei selfie <span class="muted">(il bot non li terrà)</span></label>
+          <button>salva preferenza</button>
+        </form>
+        <hr>
+        <p class="muted">Hai {{ s.selfie_count }} selfie salvati. Puoi rimuoverli tenendo depositi e conquiste.</p>
+        <form method="post" action="/me/selfies/delete" onsubmit="return confirm('Cancellare tutti i tuoi selfie? I depositi restano.')">
+          <button class="btn-danger">Cancella i miei selfie</button>
+        </form>
+      </section>
+
       <!-- Password -->
       <section class="card">
         <h2>Password</h2>

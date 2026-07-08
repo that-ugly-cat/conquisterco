@@ -29,6 +29,23 @@ def test_my_stats():
     assert s["weight_kg"] == round(2 * 128 / 1000.0, 1)  # 2 depositi × ~128 g
 
 
+def test_delete_solo_selfie(tmp_path):
+    from conquisterco.db import fresh_db
+    from conquisterco.ingest import add_deposit, add_user
+    conn = fresh_db(":memory:")
+    a = add_user(conn, "A")
+    add_deposit(conn, user_id=a, ts="2024-01-01 10:00:00", lat=1, lon=1,
+                source="telegram", photo_ref="whatsapp/x/a.jpg")
+    add_deposit(conn, user_id=a, ts="2024-01-02 10:00:00", lat=2, lon=2, source="telegram")
+    (tmp_path / "whatsapp/x").mkdir(parents=True)
+    (tmp_path / "whatsapp/x/a.jpg").write_bytes(b"x")
+
+    assert data.delete_user_selfies(conn, a, tmp_path) == 1
+    assert conn.execute("SELECT COUNT(*) FROM deposits WHERE photo_ref IS NOT NULL").fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM deposits WHERE user_id=?", (a,)).fetchone()[0] == 2  # depositi restano
+    assert not (tmp_path / "whatsapp/x/a.jpg").exists()
+
+
 def test_delete_user_cancella_tutto(tmp_path):
     conn, a, b = _world()
     data.delete_user(conn, a, tmp_path)

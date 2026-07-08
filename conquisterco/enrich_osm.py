@@ -64,6 +64,27 @@ def _persist(conn: sqlite3.Connection, res: Resolution) -> None:
     )
 
 
+def drop_fallback_territories(conn: sqlite3.Connection) -> int:
+    """Rimuove i 'comuni' che sono in realtà unità aggregate (osm_id presente in
+    admin_units): sono fallback del geocoding (es. un punto in mare finito
+    sull'intero Paese). I loro depositi tornano non risolti (territory=NULL), la
+    cache viene azzerata per non ri-assegnarli. Ritorna quanti ne ha tolti.
+    Ricordarsi di richiamare pipeline.finalize dopo."""
+    bad = [r["osm_id"] for r in conn.execute(
+        "SELECT osm_id FROM territories WHERE osm_id IN (SELECT osm_id FROM admin_units)")]
+    if not bad:
+        return 0
+    ph = ",".join("?" * len(bad))
+    conn.execute(f"UPDATE deposits SET territory_osm_id=NULL WHERE territory_osm_id IN ({ph})", bad)
+    conn.execute(f"UPDATE geocode_cache SET comune_osm_id=NULL WHERE comune_osm_id IN ({ph})", bad)
+    # svuota le derivate che referenziano i territori (finalize le ricostruisce)
+    for tbl in ("flips", "aggregate_ownership", "territory_ownership", "standings"):
+        conn.execute(f"DELETE FROM {tbl}")
+    conn.execute(f"DELETE FROM territories WHERE osm_id IN ({ph})", bad)
+    conn.commit()
+    return len(bad)
+
+
 def enrich_deposits_osm(conn: sqlite3.Connection, resolver: OSMResolver,
                         *, progress=None) -> dict:
     """Arricchisce i depositi senza comune. Ritorna un riepilogo."""

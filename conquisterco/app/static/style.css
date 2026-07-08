@@ -46,7 +46,10 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .card form{display:flex;gap:.35rem;margin-top:.3rem}
 .card input,.card button{padding:.35rem .5rem;border:1px solid var(--line);border-radius:5px}
 .card button{border:0;background:var(--accent);color:#fff;cursor:pointer}
-.stacked{flex-direction:column;align-items:stretch;max-width:280px}
+.stacked{flex-direction:column;align-items:stretch;max-width:320px}
+.chk{display:flex;gap:.4rem;align-items:center;font-size:.85rem}
+.chk input{width:auto}
+.card hr{border:0;border-top:1px solid var(--line);margin:.8rem 0}
 .btn-danger{background:#c0392b !important}
 .modal-actions{display:flex;gap:.6rem;justify-content:flex-end;margin-top:1rem}
 .modal-actions form{display:inline}

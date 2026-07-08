@@ -96,12 +96,16 @@ class OSMResolver:
             geometry=json.dumps(d["geojson"]) if d.get("geojson") else None,
         )
 
+    # addresstype troppo grossi: significa che a zoom 10 non c'è un comune vero
+    # (punto in mare / paese senza granularità comunale) → nessuna conquista.
+    _COARSE = {"country", "state", "region", "continent", "sea", "ocean", "bay"}
+
     def resolve(self, lat: float, lon: float) -> Resolution:
         res = Resolution()
         # 1) comune (zoom 10): sempre una chiamata, porta anche i NOMI dei genitori
         d10 = self._reverse(lat, lon, 10, _LEVELS[0][2])
-        if d10 is None:
-            return res
+        if d10 is None or d10.get("addresstype") in self._COARSE:
+            return res  # non risolto: il deposito non conquista nulla
         comune = self._unit(d10, "comune")
         addr = d10.get("address", {})
         comune.country = addr.get("country")

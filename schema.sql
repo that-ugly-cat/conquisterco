@@ -19,6 +19,7 @@ CREATE TABLE users (
     flag_ref      TEXT,                         -- bandierina piantata sui comuni
     home_lat      REAL,                         -- home base (record "trasferta")
     home_lon      REAL,
+    no_selfie     INTEGER NOT NULL DEFAULT 0,    -- preferenza: il bot non salva i selfie
     role          TEXT    NOT NULL DEFAULT 'user'
                           CHECK (role IN ('user', 'admin')),
     password_hash TEXT,
