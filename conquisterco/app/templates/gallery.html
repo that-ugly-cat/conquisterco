@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conquisterco — {{ g.name }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">{{ T.gallery }}</span></div>
+    <div class="auth">
+      <span class="lang-sel">
+        <a href="/lang/it" class="{{ 'lang-on' if lang == 'it' else '' }}">IT</a>
+        <a href="/lang/en" class="{{ 'lang-on' if lang == 'en' else '' }}">EN</a>
+      </span>
+      <span class="badge-ok">{{ me }}</span>
+      <a href="/"><button>{{ T.btn_map }}</button></a>
+      <form method="post" action="/logout"><button>{{ T.btn_logout }}</button></form>
+    </div>
+  </header>
+
+  <div class="prof-wrap">
+    <h1><span class="swatch" style="background:{{ g.color or '#6F4E37' }}"></span>{{ g.name }} — {{ T.gallery }}
+      <span class="muted" style="font-size:1rem;font-weight:400">{{ g.dumps | length }} 💩</span></h1>
+
+    {% if g.dumps %}
+    <div class="gallery-grid">
+      {% for d in g.dumps %}
+      <a class="gcell" {% if d.has_photo %}href="/api/selfie/{{ d.id }}" target="_blank"{% endif %}>
+        {% if d.has_photo %}<img loading="lazy" src="/api/selfie/{{ d.id }}" alt="">{% else %}<div class="grab">🐰</div>{% endif %}
+        <div class="gcap">{{ d.ts[:10] }} · {{ d.comune or '?' }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">{{ T.gallery_empty }}</p>
+    {% endif %}
+  </div>
+</body>
+</html>

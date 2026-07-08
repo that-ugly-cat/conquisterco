@@ -205,6 +205,16 @@ def api_profile(user_id: int, conn=Depends(get_db)):
     return p
 
 
+@app.get("/gallery/{user_id}", response_class=HTMLResponse)
+def gallery_page(user_id: int, request: Request, conn=Depends(get_db)):
+    require_login(request)   # foto = dato sensibile, come i pin dump
+    g = data.gallery(conn, user_id)
+    if g is None:
+        raise HTTPException(status_code=404, detail="giocatore non trovato")
+    return templates.TemplateResponse(request, "gallery.html", _ctx(
+        request, g=g, me=request.session.get("name"), admin=is_admin(request)))
+
+
 # --- API gated (solo loggati): pin dei dump + selfie ----------------------
 
 @app.get("/api/map/dumps")

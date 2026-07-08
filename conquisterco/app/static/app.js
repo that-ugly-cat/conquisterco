@@ -218,7 +218,8 @@ window.showProfile = async (uid) => {
   $("#modal .modal-box").innerHTML =
     `<span class="close" onclick="closeModal()">×</span>`
     + `<h2><span class="swatch" style="background:${esc(p.color || '#6F4E37')}"></span>${esc(p.name)}</h2>`
-    + `<p><b>${p.comuni}</b> ${T.unit_comuni} · <b>${p.km2}</b> km²</p>`
+    + `<p><b>${p.comuni}</b> ${T.unit_comuni} · <b>${p.km2}</b> km²`
+    + (window.LOGGED ? ` · <a href="/gallery/${uid}">${T.gallery_view}</a>` : "") + `</p>`
     + `<h3>${T.pm_board}</h3><p>${badges || "<i>" + T.pm_no_badge + "</i>"}</p>`
     + `<h3>${T.pm_territories}</h3><p style="font-size:.85rem">${terr}</p>`;
   $("#modal").classList.remove("hidden");

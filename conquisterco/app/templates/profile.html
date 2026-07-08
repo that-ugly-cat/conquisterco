@@ -15,6 +15,7 @@
         <a href="/lang/en" class="{{ 'lang-on' if lang == 'en' else '' }}">EN</a>
       </span>
       <span class="badge-ok">{{ me }}</span>
+      <a href="/gallery/{{ s.id }}"><button>{{ T.gallery }}</button></a>
       {% if admin %}<a href="/admin"><button>{{ T.btn_admin }}</button></a>{% endif %}
       <a href="/"><button>{{ T.btn_map }}</button></a>
       <form method="post" action="/logout"><button>{{ T.btn_logout }}</button></form>

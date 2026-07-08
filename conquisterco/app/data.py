@@ -328,6 +328,22 @@ def delete_user(conn: sqlite3.Connection, uid: int, media_dir) -> None:
             p.unlink()
 
 
+def gallery(conn: sqlite3.Connection, user_id: int, limit: int = 1000) -> dict | None:
+    """Cacate di un utente in ordine temporale (più recenti prima)."""
+    u = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+    if u is None:
+        return None
+    dumps = [
+        {"id": r["id"], "ts": r["ts"], "has_photo": r["photo_ref"] is not None,
+         "comune": r["cname"]}
+        for r in conn.execute(
+            """SELECT d.id, d.ts, d.photo_ref, t.name AS cname
+               FROM deposits d LEFT JOIN territories t ON t.osm_id = d.territory_osm_id
+               WHERE d.user_id=? ORDER BY d.ts DESC LIMIT ?""", (user_id, limit))
+    ]
+    return {"id": u["id"], "name": _pub(u), "color": u["color"], "dumps": dumps}
+
+
 def list_users(conn: sqlite3.Connection) -> list[dict]:
     """Anagrafica per il pannello admin: chi ha già una password impostata."""
     return [
