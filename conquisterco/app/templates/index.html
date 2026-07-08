@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Conquisterco — {{ T.tagline }}</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v={{ static_v }}">
 </head>
 <body>
   <header>
@@ -62,6 +62,6 @@
     window.T = {{ T | tojson }};
   </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v={{ static_v }}"></script>
 </body>
 </html>

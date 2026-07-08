@@ -36,6 +36,17 @@ DEMO_SEED = os.environ.get("CONQUISTERCO_DEMO", "1") == "1"
 
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
+
+def _static_version() -> int:
+    """mtime del file statico più recente → query ?v=... per bustare la cache."""
+    try:
+        return int(max(p.stat().st_mtime for p in (APP_DIR / "static").iterdir() if p.is_file()))
+    except ValueError:
+        return 0
+
+
+STATIC_V = _static_version()
+
 app = FastAPI(title="Conquisterco")
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("CONQUISTERCO_SECRET", secrets.token_hex(16)))
 app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="static")
@@ -111,7 +122,7 @@ def require_admin(request: Request) -> None:
 
 def _ctx(request: Request, **extra) -> dict:
     """Contesto template con traduzioni + lingua correnti (pattern autocode)."""
-    return {"T": get_t(request), "lang": get_lang(request), **extra}
+    return {"T": get_t(request), "lang": get_lang(request), "static_v": STATIC_V, **extra}
 
 
 ensure_db()
