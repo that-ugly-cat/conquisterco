@@ -31,7 +31,7 @@ WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
 ALLOWED_CHAT = os.environ.get("TELEGRAM_CHAT_ID")          # id del gruppo (str)
 BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "conquisterco_bot")
 PUBLIC_URL = os.environ.get("CONQUISTERCO_PUBLIC_URL", "")
-PAIR_WINDOW_S = 300
+PAIR_WINDOW_S = 120   # finestra di accoppiamento pin↔foto (2 minuti)
 
 
 # ---------------------------------------------------------------------------

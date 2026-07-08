@@ -75,6 +75,6 @@ conquisterco.borant.eu {
 3. In BotFather disabilita la **privacy mode** del bot (`/setprivacy` → Disable)
    così riceve i messaggi normali del gruppo (pin e foto), non solo i comandi.
 
-Ogni pin nel gruppo = un dump; la foto (entro 5 min, anche prima del pin) fa da
+Ogni pin nel gruppo = un dump; la foto (entro 2 min, anche prima del pin) fa da
 selfie. Chi non è agganciato ottiene un account provvisorio, reclamabile dal
 profilo con **Collega Telegram** (deep-link).
