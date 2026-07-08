@@ -18,7 +18,8 @@
   </header>
 
   <div class="prof-wrap">
-    <h1><span class="swatch" style="background:{{ s.color or '#6F4E37' }}"></span>{{ s.name }}</h1>
+    <h1><span class="swatch" style="background:{{ s.color or '#6F4E37' }}"></span>{{ s.name }}
+      <span class="muted" style="font-size:1rem;font-weight:400">@{{ s.username }}</span></h1>
 
     <div class="prof-grid">
       <!-- Cacate ultimo anno -->
@@ -59,6 +60,13 @@
       <!-- Identità -->
       <section class="card">
         <h2>Identità</h2>
+        <form method="post" action="/me/public-name" style="display:block;margin-bottom:.9rem">
+          <div class="img-label">Nome pubblico <span class="muted">(mostrato su mappe e classifiche)</span></div>
+          <div style="display:flex;gap:.35rem">
+            <input name="public_name" value="{{ s.public_name or s.username }}" placeholder="come vuoi apparire" style="flex:1">
+            <button>salva</button>
+          </div>
+        </form>
         <div class="img-row">
           <div>
             <div class="img-label">Avatar</div>

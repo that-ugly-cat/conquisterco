@@ -10,7 +10,9 @@ from .util import haversine_km, parse_ts
 
 
 def _names(conn: sqlite3.Connection) -> dict[int, str]:
-    return {r["id"]: r["display_name"] for r in conn.execute("SELECT id, display_name FROM users")}
+    # nome PUBBLICO (fallback allo username)
+    return {r["id"]: r["name"] for r in conn.execute(
+        "SELECT id, COALESCE(public_name, display_name) AS name FROM users")}
 
 
 def main_leaderboard(conn: sqlite3.Connection) -> list[dict]:

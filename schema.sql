@@ -11,7 +11,8 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE users (
     id            INTEGER PRIMARY KEY,
-    display_name  TEXT    NOT NULL UNIQUE,       -- anche username di login
+    display_name  TEXT    NOT NULL UNIQUE,       -- username di login (unico)
+    public_name   TEXT,                          -- nome mostrato su mappe/classifiche (fallback: display_name)
     color         TEXT,                         -- tinta sulla mappa
     wa_handle     TEXT,                         -- matching import storico WhatsApp
     telegram_id   TEXT,                         -- bot di regime

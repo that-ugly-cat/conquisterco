@@ -23,6 +23,13 @@ def _names(conn):
     return {r["id"]: r for r in conn.execute("SELECT * FROM users")}
 
 
+def _pub(row) -> str | None:
+    """Nome pubblico (mostrato ovunque), con fallback allo username."""
+    if row is None:
+        return None
+    return row["public_name"] or row["display_name"]
+
+
 def territories_geo(conn: sqlite3.Connection) -> list[dict]:
     """Comuni toccati, con centroide (media dei depositi), owner e stato.
     Il centroide evita di dover storare la geometria: buono per i marker."""
@@ -52,7 +59,7 @@ def territories_geo(conn: sqlite3.Connection) -> list[dict]:
             "lat": round(cen[0], 5), "lon": round(cen[1], 5), "deposits": cen[2],
             "top_count": r["tc"], "is_contested": bool(r["c"]),
             "owner_id": r["uid"],
-            "owner_name": owner["display_name"] if owner else None,
+            "owner_name": _pub(owner),
             "owner_color": owner["color"] if owner else None,
         })
     return out
@@ -90,7 +97,7 @@ def areas(conn: sqlite3.Connection, level: str) -> list[dict]:
             "centroid": [r["clat"], r["clon"]] if r["clat"] is not None else None,
             "geometry": json.loads(r["geo"]),
             "owner_id": r["uid"],
-            "owner_name": owner["display_name"] if owner else None,
+            "owner_name": _pub(owner),
             "owner_color": owner["color"] if owner else None,
             "owner_flag": f"/media/flag/{r['uid']}" if owner and owner["flag_ref"] else None,
             "is_contested": bool(r["c"]),
@@ -109,7 +116,7 @@ def dumps_geo(conn: sqlite3.Connection) -> list[dict]:
     ):
         u = users.get(r["user_id"])
         out.append({
-            "id": r["id"], "user_name": u["display_name"] if u else "?",
+            "id": r["id"], "user_name": _pub(u) or "?",
             "color": u["color"] if u else "#888",
             "ts": r["ts"], "lat": r["lat"], "lon": r["lon"],
             "altitude": r["altitude"],
@@ -123,7 +130,8 @@ def leaderboard(conn: sqlite3.Connection) -> dict:
 
 
 def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
-    names = {r["id"]: r["display_name"] for r in conn.execute("SELECT id, display_name FROM users")}
+    names = {r["id"]: r["name"] for r in conn.execute(
+        "SELECT id, COALESCE(public_name, display_name) AS name FROM users")}
     out = []
     for f in conn.execute(
         """SELECT f.ts, f.prev_owner_user_id AS p, f.new_owner_user_id AS nw, t.name AS tn
@@ -168,7 +176,8 @@ def my_stats(conn: sqlite3.Connection, uid: int) -> dict | None:
             if recs.get(key) and recs[key]["user_id"] == uid]
 
     return {
-        "id": uid, "name": u["display_name"], "color": u["color"],
+        "id": uid, "name": _pub(u), "username": u["display_name"],
+        "public_name": u["public_name"], "color": u["color"],
         "has_avatar": bool(u["avatar_ref"]), "has_flag": bool(u["flag_ref"]),
         "rank": rank, "players": len(lb),
         "comuni": prof["comuni"], "km2": prof["km2"],
@@ -253,11 +262,12 @@ def delete_user(conn: sqlite3.Connection, uid: int, media_dir) -> None:
 def list_users(conn: sqlite3.Connection) -> list[dict]:
     """Anagrafica per il pannello admin: chi ha già una password impostata."""
     return [
-        {"id": r["id"], "name": r["display_name"], "role": r["role"],
+        {"id": r["id"], "name": r["display_name"],
+         "public": r["public_name"] or r["display_name"], "role": r["role"],
          "has_password": bool(r["password_hash"]),
          "deposits": r["n"]}
         for r in conn.execute(
-            """SELECT u.id, u.display_name, u.role, u.password_hash,
+            """SELECT u.id, u.display_name, u.public_name, u.role, u.password_hash,
                       (SELECT COUNT(*) FROM deposits d WHERE d.user_id=u.id) AS n
                FROM users u ORDER BY n DESC, u.display_name"""
         )
@@ -281,7 +291,8 @@ def achievements(conn: sqlite3.Connection) -> list[dict]:
 
 
 def territory_detail(conn: sqlite3.Connection, osm_id: int) -> dict:
-    names = {r["id"]: r["display_name"] for r in conn.execute("SELECT id, display_name FROM users")}
+    names = {r["id"]: r["name"] for r in conn.execute(
+        "SELECT id, COALESCE(public_name, display_name) AS name FROM users")}
     t = conn.execute("SELECT * FROM territories WHERE osm_id=?", (osm_id,)).fetchone()
     standings = [
         {"user": names.get(r["user_id"], "?"), "count": r["deposit_count"]}
@@ -321,7 +332,7 @@ def profile(conn: sqlite3.Connection, user_id: int) -> dict | None:
            WHERE w.user_id=? GROUP BY a.id ORDER BY a.name""", (user_id,)
     ).fetchall()
     return {
-        "id": u["id"], "name": u["display_name"], "color": u["color"],
+        "id": u["id"], "name": _pub(u), "color": u["color"],
         "comuni": len(owned),
         "km2": round(sum(o["area"] or 0 for o in owned), 1),
         "territories": [{"name": o["name"], "country": o["country"]} for o in owned],

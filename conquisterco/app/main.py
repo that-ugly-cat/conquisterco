@@ -44,6 +44,11 @@ def _migrate(conn) -> None:
     if "no_selfie" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN no_selfie INTEGER NOT NULL DEFAULT 0")
         conn.commit()
+    if "public_name" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN public_name TEXT")
+        # utenti esistenti: nome pubblico = username
+        conn.execute("UPDATE users SET public_name=display_name WHERE public_name IS NULL")
+        conn.commit()
 
 
 def ensure_db() -> None:
@@ -264,6 +269,15 @@ def me_password(request: Request, current: str = Form(...), new: str = Form(...)
         raise HTTPException(status_code=403, detail="password attuale errata")
     conn.execute("UPDATE users SET password_hash=? WHERE id=?",
                  (hash_password(new), request.session["uid"]))
+    conn.commit()
+    return RedirectResponse("/me", status_code=303)
+
+
+@app.post("/me/public-name")
+def me_public_name(request: Request, public_name: str = Form(...), conn=Depends(get_db)):
+    require_login(request)
+    name = public_name.strip() or None   # vuoto → torna allo username
+    conn.execute("UPDATE users SET public_name=? WHERE id=?", (name, request.session["uid"]))
     conn.commit()
     return RedirectResponse("/me", status_code=303)
 
