@@ -219,6 +219,34 @@ def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
     return items[:limit]
 
 
+def feed_line_for_deposit(conn: sqlite3.Connection, deposit_id: int) -> dict | None:
+    """Evento del feed causato da un deposito (per l'annuncio del bot), o None."""
+    f = conn.execute(
+        """SELECT f.territory_osm_id t, f.id, f.ts, f.prev_owner_user_id p,
+                  f.new_owner_user_id nw, d.user_id by_user, tt.name tn
+           FROM flips f JOIN territories tt ON tt.osm_id = f.territory_osm_id
+           LEFT JOIN deposits d ON d.id = f.deposit_id
+           WHERE f.deposit_id = ? LIMIT 1""", (deposit_id,)).fetchone()
+    if f is None:
+        return None
+    names = {r["id"]: r["name"] for r in conn.execute(
+        "SELECT id, COALESCE(public_name, display_name) AS name FROM users")}
+    if f["nw"] is None:  # pareggio subìto
+        return {"kind": "contested", "territory": f["tn"],
+                "by": names.get(f["by_user"]), "defender": names.get(f["p"])}
+    # displaced = ultimo owner reale prima di questo flip
+    disp = conn.execute(
+        """SELECT new_owner_user_id nw FROM flips
+           WHERE territory_osm_id=? AND (ts<? OR (ts=? AND id<?)) AND new_owner_user_id IS NOT NULL
+           ORDER BY ts DESC, id DESC LIMIT 1""",
+        (f["t"], f["ts"], f["ts"], f["id"])).fetchone()
+    displaced = disp["nw"] if disp else None
+    if displaced == f["nw"]:
+        displaced = None
+    return {"kind": "steal" if displaced else "conquer", "territory": f["tn"],
+            "actor": names.get(f["nw"]), "displaced": names.get(displaced) if displaced else None}
+
+
 def my_stats(conn: sqlite3.Connection, uid: int) -> dict | None:
     """Statistiche personali per la pagina profilo."""
     u = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()

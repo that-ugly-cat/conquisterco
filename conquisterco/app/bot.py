@@ -26,9 +26,37 @@ from ..enrich_osm import enrich_deposits_osm
 from ..ingest import add_deposit
 from ..pipeline import finalize
 from ..util import parse_ts
+from . import data
+from .translations import TRANSLATIONS
 
 # indirezione per iniettare l'enrich altitudine nei test (evita chiamate di rete)
 _elevate = enrich_altitude
+
+ONBOARDING = (
+    "👋 Conquisterco — il gioco del cacasto.\n"
+    "Gli account li crea l'admin. Quando ne hai uno: sul sito → Profilo → "
+    "«Collega Telegram» per agganciarti.\n"
+    "Poi gioca: manda un PIN (posizione) nel gruppo e un selfie entro 2 minuti. "
+    "Ogni pin è una conquista! Comandi: /help\n\n"
+    "🇬🇧 Conquisterco — the fecal-cadastre game.\n"
+    "Accounts are created by the admin. Once you have one: on the site → Profile "
+    "→ «Link Telegram».\n"
+    "Then play: send a PIN (location) in the group and a selfie within 2 minutes. "
+    "Every pin is a conquest! Commands: /help"
+)
+
+HELP = (
+    "📍 Come si gioca:\n"
+    "1) Manda la tua posizione (PIN) nel gruppo.\n"
+    "2) Manda un selfie entro 2 minuti (anche prima del pin).\n"
+    "Chi caga di più in un comune lo possiede; si ruba superando l'owner.\n"
+    "Account e password li gestisce l'admin; il Telegram lo colleghi dal Profilo.\n\n"
+    "🇬🇧 How to play:\n"
+    "1) Send your location (PIN) in the group.\n"
+    "2) Send a selfie within 2 minutes (or before the pin).\n"
+    "Whoever dumps most in a town owns it; steal it by beating the owner.\n"
+    "Accounts & passwords are managed by the admin; link Telegram from your Profile."
+)
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
@@ -141,6 +169,20 @@ def _comune_of(conn, deposit_id: int) -> str | None:
     return r["name"] if r else None
 
 
+def _feed_sentence(item: dict, t: dict) -> str:
+    if item["kind"] == "contested":
+        return (f'{item["by"]} {t["feed_tied"]} {item["defender"]} @ {item["territory"]}'
+                if item["defender"] else f'{item["territory"]} {t["feed_contested"]}')
+    if item["kind"] == "steal":
+        return f'{item["actor"]} {t["feed_stole"]} {item["territory"]} {t["feed_from"]} {item["displaced"]}'
+    return f'{item["actor"]} {t["feed_conquered"]} {item["territory"]}'
+
+
+def _bilingual_feed(item: dict) -> str:
+    return (f'🇮🇹 {_feed_sentence(item, TRANSLATIONS["it"])}\n'
+            f'🇬🇧 {_feed_sentence(item, TRANSLATIONS["en"])}')
+
+
 # ---------------------------------------------------------------------------
 # Handler
 # ---------------------------------------------------------------------------
@@ -195,6 +237,10 @@ def _handle_location(conn, msg: dict, client, resolver, media_dir) -> None:
     _elevate(conn)            # quota da DEM (open-meteo)
     finalize(conn)
     client.send_message(msg["chat"]["id"], f"💩 registrato: {_comune_of(conn, did) or '??'}")
+    # se il dump ha causato un evento (conquista/furto/pareggio), annuncialo bilingue
+    line = data.feed_line_for_deposit(conn, did)
+    if line:
+        client.send_message(msg["chat"]["id"], _bilingual_feed(line))
 
 
 def _handle_photo(conn, msg: dict, client, media_dir) -> None:
@@ -223,10 +269,19 @@ def process_update(conn: sqlite3.Connection, update: dict, *, client, resolver, 
     if not msg or "from" not in msg:
         return
     text = msg.get("text", "") or ""
+    chat = msg.get("chat", {})
+    cmd = text.split()[0].split("@")[0] if text else ""  # gestisce anche /help@bot
 
-    if text.startswith("/start"):
+    if cmd == "/start":
         parts = text.split(maxsplit=1)
-        _handle_start(conn, msg["from"], parts[1].strip() if len(parts) > 1 else "", client, msg.get("chat", {}))
+        token = parts[1].strip() if len(parts) > 1 else ""
+        if token:
+            _handle_start(conn, msg["from"], token, client, chat)
+        else:
+            client.send_message(chat.get("id"), ONBOARDING)
+        return
+    if cmd in ("/help", "/aiuto", "/istruzioni"):
+        client.send_message(chat.get("id"), HELP)
         return
 
     # dump: solo dal gruppo autorizzato

@@ -116,6 +116,34 @@ def test_no_selfie_scarta_la_foto(tmp_path):
     assert conn.execute("SELECT COUNT(*) FROM tg_pending_photo").fetchone()[0] == 0
 
 
+def test_annuncio_feed_bilingue(tmp_path):
+    conn = fresh_db(":memory:")
+    tg = FakeTG()
+    bot.process_update(conn, loc(555, username="marco"), client=tg,
+                       resolver=FakeResolver(), media_dir=tmp_path)
+    joined = " ".join(t for _, t in tg.sent)
+    assert "conquistato" in joined and "conquered" in joined   # IT + EN
+
+
+def test_start_onboarding(tmp_path):
+    conn = fresh_db(":memory:")
+    tg = FakeTG()
+    upd = {"message": {"message_id": 1, "date": 1000, "chat": {"id": 99},
+                       "from": {"id": 1, "first_name": "X"}, "text": "/start"}}
+    bot.process_update(conn, upd, client=tg, resolver=FakeResolver(), media_dir=tmp_path)
+    assert tg.sent and "Conquisterco" in tg.sent[0][1]
+    assert conn.execute("SELECT COUNT(*) FROM deposits").fetchone()[0] == 0  # nessun dump
+
+
+def test_help(tmp_path):
+    conn = fresh_db(":memory:")
+    tg = FakeTG()
+    upd = {"message": {"message_id": 1, "date": 1000, "chat": {"id": 1},
+                       "from": {"id": 1}, "text": "/help@conquisterco_bot"}}
+    bot.process_update(conn, upd, client=tg, resolver=FakeResolver(), media_dir=tmp_path)
+    assert tg.sent and "How to play" in tg.sent[0][1]
+
+
 def test_solo_dal_gruppo_autorizzato(tmp_path):
     conn = fresh_db(":memory:")
     old = bot.ALLOWED_CHAT
