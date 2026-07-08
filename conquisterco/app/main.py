@@ -109,6 +109,11 @@ def logout(request: Request):
     return RedirectResponse("/", status_code=303)
 
 
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy_page(request: Request):
+    return templates.TemplateResponse(request, "privacy.html", {})
+
+
 # --- API pubbliche --------------------------------------------------------
 
 @app.get("/api/me")

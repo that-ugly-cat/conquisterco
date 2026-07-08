@@ -13,6 +13,10 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .auth button{padding:.3rem .7rem;border:0;border-radius:5px;background:var(--accent);color:#fff;cursor:pointer}
 .badge-ok{font-size:.75rem;background:#3c7a3c;padding:.2rem .5rem;border-radius:5px}
 .auth a{text-decoration:none}
+.mini-link{color:var(--cream);opacity:.75;font-size:.78rem;text-decoration:none}
+.mini-link:hover{opacity:1;text-decoration:underline}
+.privacy-list{list-style:none;padding:0;margin:1rem 0}
+.privacy-list li{padding:.55rem 0;border-bottom:1px solid var(--line);line-height:1.45}
 
 .admin-wrap{max-width:900px;margin:1.2rem auto;padding:0 1rem}
 .admin-wrap h2{color:var(--brown-d)}
