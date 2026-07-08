@@ -1,0 +1,15 @@
+# build/dev
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+tests/
+
+# dati personali / runtime (mai nell'immagine: stanno sul volume /data)
+historical_data/
+media/
+*.db
+*.sqlite
+*.sqlite3
+.env

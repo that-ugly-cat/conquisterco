@@ -1,0 +1,18 @@
+services:
+  conquisterco:
+    build: .
+    image: conquisterco
+    restart: always
+    # esposto solo su localhost: davanti ci sta Caddy come reverse proxy
+    ports:
+      - "127.0.0.1:8077:8077"
+    volumes:
+      # DB (conquisterco.db) e selfie (media/) persistono qui, fuori dall'immagine
+      - ./data:/data
+    environment:
+      # OBBLIGATORIO in produzione: senza, le sessioni saltano a ogni restart
+      CONQUISTERCO_SECRET: "CAMBIAMI_stringa_lunga_casuale"
+      # niente auto-seed demo: si usano i dati veri messi in ./data
+      CONQUISTERCO_DEMO: "0"
+      CONQUISTERCO_DB: /data/conquisterco.db
+      CONQUISTERCO_MEDIA: /data/media
