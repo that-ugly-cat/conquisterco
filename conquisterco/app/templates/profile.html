@@ -71,6 +71,13 @@
             <button>{{ T.save }}</button>
           </div>
         </form>
+        <form method="post" action="/me/telegram" style="display:block;margin-bottom:.9rem">
+          <div class="img-label">{{ T.telegram }} <span class="muted">{{ T.telegram_hint }}</span></div>
+          <div style="display:flex;gap:.35rem">
+            <input name="telegram" value="{{ s.telegram_id or '' }}" placeholder="{{ T.telegram_ph }}" style="flex:1">
+            <button>{{ T.save }}</button>
+          </div>
+        </form>
         <div class="img-row">
           <div>
             <div class="img-label">{{ T.avatar }}</div>

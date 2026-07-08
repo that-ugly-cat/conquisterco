@@ -294,6 +294,15 @@ def me_public_name(request: Request, public_name: str = Form(...), conn=Depends(
     return RedirectResponse("/me", status_code=303)
 
 
+@app.post("/me/telegram")
+def me_telegram(request: Request, telegram: str = Form(""), conn=Depends(get_db)):
+    require_login(request)
+    tg = telegram.strip().lstrip("@") or None   # accetta con o senza @
+    conn.execute("UPDATE users SET telegram_id=? WHERE id=?", (tg, request.session["uid"]))
+    conn.commit()
+    return RedirectResponse("/me", status_code=303)
+
+
 @app.post("/me/selfies")
 def me_selfie_pref(request: Request, no_selfie: str = Form(None), conn=Depends(get_db)):
     require_login(request)
