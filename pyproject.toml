@@ -24,6 +24,7 @@ web = [
 [project.scripts]
 conquisterco-demo = "conquisterco.seed:main"
 conquisterco-serve = "conquisterco.app.main:serve"
+conquisterco-import = "conquisterco.importers.cli:main"
 
 [build-system]
 requires = ["hatchling"]
