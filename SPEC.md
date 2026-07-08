@@ -143,6 +143,32 @@ Due modalità sulla stessa mappa (Leaflet / MapLibre):
 Contorno: pannello leaderboard (principale + secondarie a tab), feed flip, profilo
 giocatore con bacheca badge.
 
+### 7.1 Aree, poligoni e Level-of-Detail
+
+La mappa è una **coropletica**: le aree si riempiono del colore dell'owner, con la
+**bandierina** del giocatore piantata al centroide sopra il poligono; contested =
+grigio. (I marker ai centroidi della prima versione erano un segnaposto.)
+
+A zoom largo un solo pin per comune è illeggibile, quindi si aggrega su **quattro
+livelli amministrativi** con un Level-of-Detail:
+
+- z ≤ 4 → **stati** · 5-6 → **regioni** · 7-8 → **province** · z ≥ 9 → **comuni**
+
+**Ownership aggregata (logica A):** owner di provincia/regione/stato = chi vi
+**controlla più comuni** (max stretto, parità = conteso), esattamente la regola dei
+comuni un livello sopra. È **derivata** dai comuni, si rigenera; la leaderboard resta
+sui comuni.
+
+**Geocoding & geometrie (Nominatim pubblico + cache):**
+- reverse-geocode di ogni punto a zoom 10/8/6/3 → osm_id di comune, provincia,
+  regione, stato + gerarchia (nomi/ISO) + geometria (GeoJSON) di ciascun livello;
+- si recuperano **solo le unità toccate** dai depositi (+ i loro antenati), e le
+  **nuove** al volo quando compaiono; tutto **cachato** nel DB → l'egress verso OSM
+  è una tantum e non si ripete;
+- niente self-host (troppo oneroso); geometrie semplificate per tenere leggere le
+  aree grandi (stati). Backend dietro interfaccia: un domani si può puntare a un
+  Nominatim proprio cambiando URL.
+
 ---
 
 ## 8. Input
