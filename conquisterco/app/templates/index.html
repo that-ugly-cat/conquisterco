@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conquisterco — il Cacasto</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">il Cacasto</span></div>
+    <div class="auth">
+      {% if logged %}
+        <span class="badge-ok">loggato</span>
+        <form method="post" action="/logout"><button>esci</button></form>
+      {% else %}
+        <form method="post" action="/login" class="login">
+          <input type="password" name="password" placeholder="password" autocomplete="current-password">
+          <button>entra</button>
+        </form>
+      {% endif %}
+    </div>
+  </header>
+
+  <main>
+    <div id="map"></div>
+
+    <aside>
+      <div class="mode">
+        <button id="btn-territori" class="active">Territori</button>
+        <button id="btn-dump">Dump</button>
+      </div>
+
+      <div class="tabs">
+        <button data-tab="classifica" class="active">Classifica</button>
+        <button data-tab="record">Record</button>
+        <button data-tab="feed">Feed</button>
+      </div>
+
+      <section id="tab-classifica" class="tab active"></section>
+      <section id="tab-record" class="tab"></section>
+      <section id="tab-feed" class="tab"></section>
+
+      <div id="detail" class="detail hidden"></div>
+    </aside>
+  </main>
+
+  <div id="modal" class="modal hidden"><div class="modal-box"></div></div>
+
+  <script>window.LOGGED = {{ 'true' if logged else 'false' }};</script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

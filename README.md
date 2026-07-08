@@ -18,25 +18,30 @@ trasferta più lontana…) e achievement.
 
 ## Stato
 
-**Fase 1 — Motore di dominio.** Il cuore gira e ha i test verdi: ingestione
-normalizzata, geo-enrich pluggable, recompute (standings/ownership/flips),
-motore achievement a registry, leaderboard. Ancora niente dashboard/auth/bot
-(Fasi 3-5). Gira su sola stdlib.
+**Fase 3 — Dashboard.** Sopra il motore di Fase 1 c'è una web app FastAPI +
+Leaflet: mappa con modalità **Territori** (pin colorati per owner) e **Dump**
+(pin dei singoli depositi con selfie / coniglio 🐰), pannello classifica
+(comuni + km²), record superlativi, feed dei flip e profilo giocatore con
+bacheca badge. Login minimale a password condivisa che fa da gate ai pin dump.
+Ancora da fare: import storico (Fase 2), gestione utenti/admin (Fase 4), bot
+Telegram (Fase 5), geocoder OSM reale.
 
 - [`SPEC.md`](SPEC.md) — specifica completa
 - [`schema.sql`](schema.sql) — schema DB (SQLite)
 - [`docs/whatsapp-import.md`](docs/whatsapp-import.md) — formato import storico
-- [`conquisterco/`](conquisterco/) — il motore · [`tests/`](tests/) — la suite
+- [`conquisterco/`](conquisterco/) — motore + `app/` (dashboard) · [`tests/`](tests/) — suite
 
 ## Come girare
 
 ```bash
-uv run conquisterco-demo      # mondo fittizio + report end-to-end
-uv run --extra dev pytest     # test
+uv run conquisterco-demo             # mondo fittizio + report su console
+uv run --extra web conquisterco-serve   # dashboard su http://127.0.0.1:8077
+uv run --extra dev pytest            # test
 ```
 
-Il demo semina 4 giocatori e uno scenario che innesca conquiste, furti e la
-gran parte dei badge, poi stampa classifica, record, feed dei flip e bacheca.
+La dashboard, al primo avvio, semina un mondo demo (4 giocatori, scenario che
+innesca conquiste/furti/badge). Password di default `cacca`
+(`CONQUISTERCO_PASSWORD`), DB in `conquisterco.db` (`CONQUISTERCO_DB`).
 
 ## Stack previsto
 
