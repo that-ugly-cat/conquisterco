@@ -1,26 +1,30 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="{{ lang }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Conquisterco — il Cacasto</title>
+  <title>Conquisterco — {{ T.tagline }}</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
-    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">la mappa del cacasto fecale</span></div>
+    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">{{ T.tagline }}</span></div>
     <div class="auth">
-      <a href="/privacy" class="mini-link" title="informativa privacy">🔒 privacy</a>
+      <span class="lang-sel">
+        <a href="/lang/it" class="{{ 'lang-on' if lang == 'it' else '' }}">IT</a>
+        <a href="/lang/en" class="{{ 'lang-on' if lang == 'en' else '' }}">EN</a>
+      </span>
+      <a href="/privacy" class="mini-link" title="{{ T.privacy }}">🔒 {{ T.privacy }}</a>
       {% if logged %}
         <a href="/me"><button class="badge-ok">{{ me }}</button></a>
-        {% if admin %}<a href="/admin"><button>admin</button></a>{% endif %}
-        <form method="post" action="/logout"><button>esci</button></form>
+        {% if admin %}<a href="/admin"><button>{{ T.btn_admin }}</button></a>{% endif %}
+        <form method="post" action="/logout"><button>{{ T.btn_logout }}</button></form>
       {% else %}
         <form method="post" action="/login" class="login">
-          <input name="username" placeholder="nome" autocomplete="username">
-          <input type="password" name="password" placeholder="password" autocomplete="current-password">
-          <button>entra</button>
+          <input name="username" placeholder="{{ T.login_name }}" autocomplete="username">
+          <input type="password" name="password" placeholder="{{ T.login_pw }}" autocomplete="current-password">
+          <button>{{ T.login_btn }}</button>
         </form>
       {% endif %}
     </div>
@@ -31,15 +35,15 @@
 
     <aside>
       <div class="mode">
-        <button id="btn-territori" class="active">Territori</button>
-        <button id="btn-dump">Dump</button>
+        <button id="btn-territori" class="active">{{ T.mode_territories }}</button>
+        <button id="btn-dump">{{ T.mode_dump }}</button>
       </div>
 
       <div class="tabs">
-        <button data-tab="classifica" class="active">Classifica</button>
-        <button data-tab="record">Record</button>
-        <button data-tab="feed">Feed</button>
-        <button data-tab="badge">Badge</button>
+        <button data-tab="classifica" class="active">{{ T.tab_ranking }}</button>
+        <button data-tab="record">{{ T.tab_records }}</button>
+        <button data-tab="feed">{{ T.tab_feed }}</button>
+        <button data-tab="badge">{{ T.tab_badges }}</button>
       </div>
 
       <section id="tab-classifica" class="tab active"></section>
@@ -53,7 +57,10 @@
 
   <div id="modal" class="modal hidden"><div class="modal-box"></div></div>
 
-  <script>window.LOGGED = {{ 'true' if logged else 'false' }};</script>
+  <script>
+    window.LOGGED = {{ 'true' if logged else 'false' }};
+    window.T = {{ T | tojson }};
+  </script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/static/app.js"></script>
 </body>

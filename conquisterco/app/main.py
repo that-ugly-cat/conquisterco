@@ -18,6 +18,7 @@ from ..pipeline import run_all
 from ..seed import build_world, seed_deposits
 from . import data
 from .auth import hash_password, verify_password
+from .translations import SUPPORTED_LANGUAGES, get_lang, get_t
 
 APP_DIR = Path(__file__).resolve().parent
 _ROOT = APP_DIR.parent.parent
@@ -92,6 +93,11 @@ def require_admin(request: Request) -> None:
         raise HTTPException(status_code=403, detail="serve un admin")
 
 
+def _ctx(request: Request, **extra) -> dict:
+    """Contesto template con traduzioni + lingua correnti (pattern autocode)."""
+    return {"T": get_t(request), "lang": get_lang(request), **extra}
+
+
 ensure_db()
 
 
@@ -99,10 +105,9 @@ ensure_db()
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    return templates.TemplateResponse(request, "index.html", {
-        "logged": is_logged(request), "admin": is_admin(request),
-        "me": request.session.get("name"),
-    })
+    return templates.TemplateResponse(request, "index.html", _ctx(
+        request, logged=is_logged(request), admin=is_admin(request),
+        me=request.session.get("name")))
 
 
 @app.post("/login")
@@ -125,7 +130,15 @@ def logout(request: Request):
 
 @app.get("/privacy", response_class=HTMLResponse)
 def privacy_page(request: Request):
-    return templates.TemplateResponse(request, "privacy.html", {})
+    return templates.TemplateResponse(request, "privacy.html", _ctx(request))
+
+
+@app.get("/lang/{code}")
+def set_lang(code: str, request: Request):
+    resp = RedirectResponse(request.headers.get("referer") or "/", status_code=303)
+    if code in SUPPORTED_LANGUAGES:
+        resp.set_cookie("lang", code, max_age=31_536_000, samesite="lax")
+    return resp
 
 
 # --- API pubbliche --------------------------------------------------------
@@ -159,8 +172,8 @@ def api_feed(conn=Depends(get_db)):
 
 
 @app.get("/api/achievements")
-def api_achievements(conn=Depends(get_db)):
-    return data.achievements(conn)
+def api_achievements(request: Request, conn=Depends(get_db)):
+    return data.achievements(conn, get_t(request))
 
 
 @app.get("/api/territory/{osm_id}")
@@ -235,10 +248,9 @@ def me_page(request: Request, conn=Depends(get_db)):
     if stats is None:
         request.session.clear()
         return RedirectResponse("/", status_code=303)
-    return templates.TemplateResponse(request, "profile.html", {
-        "s": stats, "me": request.session.get("name"), "admin": is_admin(request),
-        "legend": data.achievements(conn),
-    })
+    return templates.TemplateResponse(request, "profile.html", _ctx(
+        request, s=stats, me=request.session.get("name"), admin=is_admin(request),
+        legend=data.achievements(conn, get_t(request))))
 
 
 @app.post("/me/avatar")
@@ -321,9 +333,8 @@ def media_flag(uid: int, conn=Depends(get_db)):
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page(request: Request, conn=Depends(get_db)):
     require_admin(request)
-    return templates.TemplateResponse(request, "admin.html", {
-        "users": data.list_users(conn), "me": request.session.get("name"),
-    })
+    return templates.TemplateResponse(request, "admin.html", _ctx(
+        request, users=data.list_users(conn), me=request.session.get("name")))
 
 
 @app.post("/admin/create")

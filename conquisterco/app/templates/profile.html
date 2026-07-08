@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="{{ lang }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,12 +8,16 @@
 </head>
 <body>
   <header>
-    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">profilo</span></div>
+    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">{{ T.tag_profile }}</span></div>
     <div class="auth">
+      <span class="lang-sel">
+        <a href="/lang/it" class="{{ 'lang-on' if lang == 'it' else '' }}">IT</a>
+        <a href="/lang/en" class="{{ 'lang-on' if lang == 'en' else '' }}">EN</a>
+      </span>
       <span class="badge-ok">{{ me }}</span>
-      {% if admin %}<a href="/admin"><button>admin</button></a>{% endif %}
-      <a href="/"><button>← mappa</button></a>
-      <form method="post" action="/logout"><button>esci</button></form>
+      {% if admin %}<a href="/admin"><button>{{ T.btn_admin }}</button></a>{% endif %}
+      <a href="/"><button>{{ T.btn_map }}</button></a>
+      <form method="post" action="/logout"><button>{{ T.btn_logout }}</button></form>
     </div>
   </header>
 
@@ -22,9 +26,9 @@
       <span class="muted" style="font-size:1rem;font-weight:400">@{{ s.username }}</span></h1>
 
     <div class="prof-grid">
-      <!-- Cacate ultimo anno -->
+      <!-- Istogramma -->
       <section class="card wide">
-        <h2>Cacate — ultimo anno</h2>
+        <h2>{{ T.prof_hist }}</h2>
         {% set maxc = (s.activity | map(attribute='count') | max) or 1 %}
         <div class="histo">
           {% for a in s.activity %}
@@ -39,47 +43,47 @@
 
       <!-- Statistiche -->
       <section class="card">
-        <h2>Statistiche</h2>
+        <h2>{{ T.prof_stats }}</h2>
         <div class="stat-grid">
-          <div><b>#{{ s.rank or '—' }}</b><span>su {{ s.players }}</span></div>
-          <div><b>{{ s.comuni }}</b><span>comuni posseduti</span></div>
-          <div><b>{{ s.km2 }}</b><span>km² controllati</span></div>
-          <div><b>{{ s.deposits }}</b><span>depositi totali</span></div>
-          <div><b>{{ s.comuni_visitati }}</b><span>comuni visitati</span></div>
-          <div><b>{{ s.nazioni }}</b><span>nazioni</span></div>
-          <div><b>{{ s.regioni }}</b><span>regioni</span></div>
-          <div><b>{{ s.streak }}</b><span>streak (giorni)</span></div>
-          <div title="stima: ~128 g a deposito"><b>{{ s.weight_kg }}</b><span>kg 💩 (stima)</span></div>
+          <div><b>#{{ s.rank or '—' }}</b><span>{{ T.st_of }} {{ s.players }}</span></div>
+          <div><b>{{ s.comuni }}</b><span>{{ T.st_comuni }}</span></div>
+          <div><b>{{ s.km2 }}</b><span>{{ T.st_km2 }}</span></div>
+          <div><b>{{ s.deposits }}</b><span>{{ T.st_deposits }}</span></div>
+          <div><b>{{ s.comuni_visitati }}</b><span>{{ T.st_visited }}</span></div>
+          <div><b>{{ s.nazioni }}</b><span>{{ T.st_nations }}</span></div>
+          <div><b>{{ s.regioni }}</b><span>{{ T.st_regions }}</span></div>
+          <div><b>{{ s.streak }}</b><span>{{ T.st_streak }}</span></div>
+          <div title="{{ T.st_weight_tip }}"><b>{{ s.weight_kg }}</b><span>{{ T.st_weight }}</span></div>
         </div>
-        <p class="muted">Dal {{ (s.primo or '')[:10] }} al {{ (s.ultimo or '')[:10] }}</p>
-        {% if s.records %}<p><b>Record detenuti:</b> {{ s.records | join(', ') }}</p>{% endif %}
-        <h3>Badge ({{ s.badges | length }}) <button class="link-btn" onclick="document.getElementById('legend').classList.remove('hidden')">cosa sono?</button></h3>
-        <p>{% for b in s.badges %}{{ b.icon or '🏅' }} {{ b.name }}{% if b.count > 1 %} ×{{ b.count }}{% endif %}<br>{% else %}<i>nessun badge</i>{% endfor %}</p>
+        <p class="muted">{{ T.st_from }} {{ (s.primo or '')[:10] }} {{ T.st_to }} {{ (s.ultimo or '')[:10] }}</p>
+        {% if s.records %}<p><b>{{ T.st_records_held }}</b> {% for k in s.records %}{{ T['rec_' + k] }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+        <h3>{{ T.tab_badges }} ({{ s.badges | length }}) <button class="link-btn" onclick="document.getElementById('legend').classList.remove('hidden')">{{ T.badges_what }}</button></h3>
+        <p>{% for b in s.badges %}{{ b.icon or '🏅' }} {{ b.name }}{% if b.count > 1 %} ×{{ b.count }}{% endif %}<br>{% else %}<i>{{ T.pm_no_badge }}</i>{% endfor %}</p>
       </section>
 
       <!-- Identità -->
       <section class="card">
-        <h2>Identità</h2>
+        <h2>{{ T.identity }}</h2>
         <form method="post" action="/me/public-name" style="display:block;margin-bottom:.9rem">
-          <div class="img-label">Nome pubblico <span class="muted">(mostrato su mappe e classifiche)</span></div>
+          <div class="img-label">{{ T.pub_name }} <span class="muted">{{ T.pub_name_hint }}</span></div>
           <div style="display:flex;gap:.35rem">
-            <input name="public_name" value="{{ s.public_name or s.username }}" placeholder="come vuoi apparire" style="flex:1">
-            <button>salva</button>
+            <input name="public_name" value="{{ s.public_name or s.username }}" placeholder="{{ T.pub_name_ph }}" style="flex:1">
+            <button>{{ T.save }}</button>
           </div>
         </form>
         <div class="img-row">
           <div>
-            <div class="img-label">Avatar</div>
-            {% if s.has_avatar %}<img class="prof-img" src="/media/avatar/{{ s.id }}?v={{ range(99999) | random }}">{% else %}<div class="prof-img empty">nessuno</div>{% endif %}
+            <div class="img-label">{{ T.avatar }}</div>
+            {% if s.has_avatar %}<img class="prof-img" src="/media/avatar/{{ s.id }}?v={{ range(99999) | random }}">{% else %}<div class="prof-img empty">{{ T.none_m }}</div>{% endif %}
             <form method="post" action="/me/avatar" enctype="multipart/form-data">
-              <input type="file" name="file" accept="image/*" required><button>carica</button>
+              <input type="file" name="file" accept="image/*" required><button>{{ T.upload }}</button>
             </form>
           </div>
           <div>
-            <div class="img-label">Bandiera <span class="muted">(sui comuni della mappa)</span></div>
-            {% if s.has_flag %}<img class="prof-img" src="/media/flag/{{ s.id }}?v={{ range(99999) | random }}">{% else %}<div class="prof-img empty">nessuna</div>{% endif %}
+            <div class="img-label">{{ T.flag }} <span class="muted">{{ T.flag_hint }}</span></div>
+            {% if s.has_flag %}<img class="prof-img" src="/media/flag/{{ s.id }}?v={{ range(99999) | random }}">{% else %}<div class="prof-img empty">{{ T.none_f }}</div>{% endif %}
             <form method="post" action="/me/flag" enctype="multipart/form-data">
-              <input type="file" name="file" accept="image/*" required><button>carica</button>
+              <input type="file" name="file" accept="image/*" required><button>{{ T.upload }}</button>
             </form>
           </div>
         </div>
@@ -87,33 +91,33 @@
 
       <!-- Selfie -->
       <section class="card">
-        <h2>Selfie</h2>
+        <h2>{{ T.selfie }}</h2>
         <form method="post" action="/me/selfies" class="stacked">
-          <label class="chk"><input type="checkbox" name="no_selfie" {% if s.no_selfie %}checked{% endif %}> Non salvare i miei selfie <span class="muted">(il bot non li terrà)</span></label>
-          <button>salva preferenza</button>
+          <label class="chk"><input type="checkbox" name="no_selfie" {% if s.no_selfie %}checked{% endif %}> {{ T.no_selfie_pref }} <span class="muted">{{ T.no_selfie_bot }}</span></label>
+          <button>{{ T.save_pref }}</button>
         </form>
         <hr>
-        <p class="muted">Hai {{ s.selfie_count }} selfie salvati. Puoi rimuoverli tenendo depositi e conquiste.</p>
-        <form method="post" action="/me/selfies/delete" onsubmit="return confirm('Cancellare tutti i tuoi selfie? I depositi restano.')">
-          <button class="btn-danger">Cancella i miei selfie</button>
+        <p class="muted">{{ T.selfie_have.replace('{n}', s.selfie_count | string) }}</p>
+        <form method="post" action="/me/selfies/delete" onsubmit="return confirm('{{ T.del_selfies_confirm }}')">
+          <button class="btn-danger">{{ T.del_selfies }}</button>
         </form>
       </section>
 
       <!-- Password -->
       <section class="card">
-        <h2>Password</h2>
+        <h2>{{ T.password }}</h2>
         <form method="post" action="/me/password" class="stacked">
-          <input type="password" name="current" placeholder="password attuale" required>
-          <input type="password" name="new" placeholder="nuova password" required>
-          <button>cambia</button>
+          <input type="password" name="current" placeholder="{{ T.pw_current }}" required>
+          <input type="password" name="new" placeholder="{{ T.pw_new }}" required>
+          <button>{{ T.pw_change }}</button>
         </form>
       </section>
 
       <!-- Danger zone -->
       <section class="card danger">
-        <h2>Zona pericolosa</h2>
-        <p class="muted">Cancella profilo e <b>tutti</b> i tuoi dati (depositi, foto, conquiste). Irreversibile.</p>
-        <button class="btn-danger" onclick="document.getElementById('confirm').classList.remove('hidden')">Cancella tutto</button>
+        <h2>{{ T.danger }}</h2>
+        <p class="muted">{{ T.danger_desc }}</p>
+        <button class="btn-danger" onclick="document.getElementById('confirm').classList.remove('hidden')">{{ T.del_all }}</button>
       </section>
     </div>
   </div>
@@ -121,11 +125,11 @@
   <div id="legend" class="modal hidden">
     <div class="modal-box">
       <span class="close" onclick="document.getElementById('legend').classList.add('hidden')">×</span>
-      <h2>Significato dei badge</h2>
+      <h2>{{ T.legend_title }}</h2>
       {% for b in legend %}
       <div class="badge-row"><div class="badge-ic">{{ b.icon or '🏅' }}</div>
         <div><b>{{ b.name }}</b>
-          <span class="badge-holders">{% if b.holders %}· {{ b.holders }} l'hanno preso{% else %}· nessuno ancora{% endif %}</span>
+          <span class="badge-holders">{% if b.holders %}· {{ b.holders }} {{ T.holders_some }}{% else %}· {{ T.holders_none }}{% endif %}</span>
           <div class="badge-desc">{{ b.description }}</div></div></div>
       {% endfor %}
     </div>
@@ -133,11 +137,11 @@
 
   <div id="confirm" class="modal hidden">
     <div class="modal-box">
-      <h2>Sei sicuro?</h2>
-      <p>Questo cancella <b>definitivamente</b> il tuo profilo e ogni tuo deposito. I comuni che possiedi torneranno liberi. Non si torna indietro.</p>
+      <h2>{{ T.del_all_sure }}</h2>
+      <p>{{ T.del_all_body }}</p>
       <div class="modal-actions">
-        <button onclick="document.getElementById('confirm').classList.add('hidden')">Annulla</button>
-        <form method="post" action="/me/delete"><button class="btn-danger">Sì, cancella tutto</button></form>
+        <button onclick="document.getElementById('confirm').classList.add('hidden')">{{ T.cancel }}</button>
+        <form method="post" action="/me/delete"><button class="btn-danger">{{ T.del_all_confirm }}</button></form>
       </div>
     </div>
   </div>

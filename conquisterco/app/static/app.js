@@ -1,12 +1,14 @@
 "use strict";
 
+const T = window.T || {};
+
 const map = L.map("map", { zoomControl: true }).setView([45.9, 11.3], 8);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap", maxZoom: 18,
 }).addTo(map);
 
-const areaLayer = L.layerGroup().addTo(map);   // poligoni coropletici
-const flagLayer = L.layerGroup().addTo(map);   // bandierine ai centroidi
+const areaLayer = L.layerGroup().addTo(map);
+const flagLayer = L.layerGroup().addTo(map);
 const dumpLayer = L.layerGroup();
 let mode = "territori";
 
@@ -46,27 +48,22 @@ async function loadAreas(force) {
   areaLayer.clearLayers();
   flagLayer.clearLayers();
 
-  if (!feats.length) {              // DB demo (niente geometrie) → marker di ripiego
+  if (!feats.length) {
     if (level === "comune") loadFallbackMarkers();
     return;
   }
 
-  const unit = level === "comune" ? "💩" : "comuni";
+  const unit = level === "comune" ? "💩" : T.unit_comuni;
   for (const f of feats) {
     const gj = L.geoJSON(
       { type: "Feature", geometry: f.geometry, properties: f },
-      {
-        style: {
-          color: "#fff", weight: 1, fillColor: ownerColor(f),
-          fillOpacity: f.owner_id ? 0.55 : 0.25,
-        },
-      }
+      { style: { color: "#fff", weight: 1, fillColor: ownerColor(f), fillOpacity: f.owner_id ? 0.55 : 0.25 } }
     );
-    const owner = f.is_contested ? "<i>conteso</i>"
-      : (f.owner_name ? `<b>${esc(f.owner_name)}</b>` : "nessuno");
+    const owner = f.is_contested ? `<i>${T.contested}</i>`
+      : (f.owner_name ? `<b>${esc(f.owner_name)}</b>` : T.nobody);
     const link = level === "comune"
-      ? `<br><a href="#" onclick="showTerritory(${f.osm_id});return false;">dettaglio →</a>` : "";
-    gj.bindPopup(`<b>${esc(f.name)}</b><br>owner: ${owner} (${f.count} ${unit})${link}`);
+      ? `<br><a href="#" onclick="showTerritory(${f.osm_id});return false;">${T.details}</a>` : "";
+    gj.bindPopup(`<b>${esc(f.name)}</b><br>${T.owner}: ${owner} (${f.count} ${unit})${link}`);
     areaLayer.addLayer(gj);
 
     if (f.centroid) {
@@ -83,10 +80,10 @@ async function loadFallbackMarkers() {
   for (const t of rows) {
     const label = t.is_contested ? "?" : (t.owner_name ? t.owner_name[0] : "·");
     const m = L.marker([t.lat, t.lon], { icon: pinIcon(t.owner_color, label, t.is_contested) });
-    const owner = t.is_contested ? "<i>conteso</i>"
-      : (t.owner_name ? `<b>${esc(t.owner_name)}</b>` : "nessuno");
-    m.bindPopup(`<b>${esc(t.name)}</b><br>owner: ${owner} (${t.top_count} 💩)<br>`
-      + `<a href="#" onclick="showTerritory(${t.osm_id});return false;">dettaglio →</a>`);
+    const owner = t.is_contested ? `<i>${T.contested}</i>`
+      : (t.owner_name ? `<b>${esc(t.owner_name)}</b>` : T.nobody);
+    m.bindPopup(`<b>${esc(t.name)}</b><br>${T.owner}: ${owner} (${t.top_count} 💩)<br>`
+      + `<a href="#" onclick="showTerritory(${t.osm_id});return false;">${T.details}</a>`);
     flagLayer.addLayer(m);
   }
 }
@@ -107,10 +104,10 @@ async function loadDumps() {
     const selfie = d.has_photo
       ? `<img class="selfie-img" src="/api/selfie/${d.id}" alt="selfie"
              onerror="this.outerHTML='&lt;div class=&quot;selfie&quot;&gt;🐰&lt;/div&gt;'">`
-      : `<div class="selfie" title="nessun selfie">🐰</div>`;
+      : `<div class="selfie" title="${T.no_selfie_short}">🐰</div>`;
     const alt = d.altitude != null ? `${Math.round(d.altitude)} m` : "?";
     m.bindPopup(`${selfie}<div style="margin-top:.4rem"><b>${esc(d.user_name)}</b><br>`
-      + `${esc(d.ts)}<br>quota ${alt}</div>`, { maxWidth: 220 });
+      + `${esc(d.ts)}<br>${T.altitude} ${alt}</div>`, { maxWidth: 220 });
     dumpLayer.addLayer(m);
   }
 }
@@ -121,10 +118,7 @@ $("#btn-dump").onclick = () => setMode("dump");
 
 function setMode(m) {
   const terr = m === "territori";
-  if (!terr && !window.LOGGED) {
-    alert("I pin dei dump sono visibili solo dopo il login.");
-    return;
-  }
+  if (!terr && !window.LOGGED) { alert(T.login_needed_dumps); return; }
   mode = m;
   $("#btn-territori").classList.toggle("active", terr);
   $("#btn-dump").classList.toggle("active", !terr);
@@ -146,9 +140,16 @@ document.querySelectorAll(".tabs button").forEach((b) => {
   };
 });
 
+function feedText(f) {
+  if (f.kind === "contested") return `${esc(f.territory)} ${T.feed_contested}`;
+  if (f.kind === "conquer") return `${esc(f.actor)} ${T.feed_conquered} ${esc(f.territory)}`;
+  return `${esc(f.actor)} ${T.feed_stole} ${esc(f.territory)} ${T.feed_from} ${esc(f.prev)}`;
+}
+
 async function loadPanels() {
   const lb = await fetch("/api/leaderboard").then((r) => r.json());
-  let h = "<table><tr><th>#</th><th>Giocatore</th><th class='num'>comuni</th><th class='num'>km²</th></tr>";
+  let h = `<table><tr><th>${T.th_num}</th><th>${T.th_player}</th>`
+    + `<th class='num'>${T.th_comuni}</th><th class='num'>${T.th_km2}</th></tr>`;
   lb.main.forEach((row, i) => {
     h += `<tr><td>${i + 1}</td><td><span class="swatch" style="background:${esc(row.color || '#6F4E37')}"></span>`
       + `<span class="player-link" onclick="showProfile(${row.user_id})">${esc(row.name)}</span></td>`
@@ -156,33 +157,28 @@ async function loadPanels() {
   });
   $("#tab-classifica").innerHTML = h + "</table>";
 
-  const labels = {
-    nord: "Più a Nord", sud: "Più a Sud", est: "Più a Est", ovest: "Più a Ovest",
-    piu_in_alto: "Più in alto", piu_in_basso: "Più in basso", trasferta: "Trasferta",
-    esploratore: "Esploratore", volume: "Volume", passaporto: "Passaporto",
-    streak: "Streak", latifondista: "Latifondista",
-  };
+  const keys = ["nord", "sud", "est", "ovest", "piu_in_alto", "piu_in_basso",
+    "trasferta", "esploratore", "volume", "passaporto", "streak", "latifondista"];
   let r = "";
-  for (const [k, lab] of Object.entries(labels)) {
+  for (const k of keys) {
     const rec = lb.records[k];
     const v = rec ? `${esc(rec.name)} <b>${fmtVal(rec.value)}</b>${rec.where ? " @ " + esc(rec.where) : ""}` : "—";
-    r += `<div class="rec"><span class="lab">${lab}</span><span>${v}</span></div>`;
+    r += `<div class="rec"><span class="lab">${T["rec_" + k]}</span><span>${v}</span></div>`;
   }
   $("#tab-record").innerHTML = r;
 
   const feed = await fetch("/api/feed").then((r) => r.json());
   $("#tab-feed").innerHTML = feed.map((f) =>
-    `<div class="feed-item ${f.kind}"><span class="ts">${esc(f.ts.slice(0, 10))}</span>${esc(f.text)}</div>`
+    `<div class="feed-item ${f.kind}"><span class="ts">${esc(f.ts.slice(0, 10))}</span>${feedText(f)}</div>`
   ).join("");
 
-  // legenda achievement (spiegazione dei badge)
   const badges = await fetch("/api/achievements").then((r) => r.json());
   $("#tab-badge").innerHTML =
-    `<p class="hint">Come si sbloccano i badge. Il ? sulla mappa è un territorio <b>conteso</b> (parità): vale zero finché nessuno supera.</p>`
+    `<p class="hint">${T.badge_hint}</p>`
     + badges.map((b) =>
         `<div class="badge-row"><div class="badge-ic">${b.icon || "🏅"}</div>`
         + `<div><b>${esc(b.name)}</b>`
-        + `<span class="badge-holders">${b.holders ? "· " + b.holders + " l'hanno preso" : "· nessuno ancora"}</span>`
+        + `<span class="badge-holders">${b.holders ? "· " + b.holders + " " + T.holders_some : "· " + T.holders_none}</span>`
         + `<div class="badge-desc">${esc(b.description || "")}</div></div></div>`
       ).join("");
 }
@@ -196,13 +192,13 @@ window.showTerritory = async (osm) => {
   const d = await fetch("/api/territory/" + osm).then((r) => r.json());
   const st = d.standings.map((s) => `<tr><td>${esc(s.user)}</td><td class="num">${s.count}</td></tr>`).join("");
   const hist = d.history.map((h) => {
-    const nw = h.new || "conteso", p = h.prev ? ` (da ${esc(h.prev)})` : "";
+    const nw = h.new || T.contested, p = h.prev ? ` (${T.td_from} ${esc(h.prev)})` : "";
     return `<div class="feed-item"><span class="ts">${esc(h.ts.slice(0, 10))}</span>${esc(nw)}${p}</div>`;
   }).join("");
   $("#detail").innerHTML =
     `<h3>${esc(d.name)}</h3><div class="lab">${esc(d.country || "")} · ${d.area_km2 || "?"} km²</div>`
-    + `<table><tr><th>Giocatore</th><th class="num">💩</th></tr>${st}</table>`
-    + `<h3 style="margin-top:.6rem">Storia</h3>${hist || "<i>—</i>"}`;
+    + `<table><tr><th>${T.th_player}</th><th class="num">💩</th></tr>${st}</table>`
+    + `<h3 style="margin-top:.6rem">${T.td_history}</h3>${hist || "<i>—</i>"}`;
   $("#detail").classList.remove("hidden");
 };
 
@@ -214,9 +210,9 @@ window.showProfile = async (uid) => {
   $("#modal .modal-box").innerHTML =
     `<span class="close" onclick="closeModal()">×</span>`
     + `<h2><span class="swatch" style="background:${esc(p.color || '#6F4E37')}"></span>${esc(p.name)}</h2>`
-    + `<p><b>${p.comuni}</b> comuni · <b>${p.km2}</b> km²</p>`
-    + `<h3>Bacheca</h3><p>${badges || "<i>nessun badge</i>"}</p>`
-    + `<h3>Territori</h3><p style="font-size:.85rem">${terr}</p>`;
+    + `<p><b>${p.comuni}</b> ${T.unit_comuni} · <b>${p.km2}</b> km²</p>`
+    + `<h3>${T.pm_board}</h3><p>${badges || "<i>" + T.pm_no_badge + "</i>"}</p>`
+    + `<h3>${T.pm_territories}</h3><p style="font-size:.85rem">${terr}</p>`;
   $("#modal").classList.remove("hidden");
 };
 window.closeModal = () => $("#modal").classList.add("hidden");

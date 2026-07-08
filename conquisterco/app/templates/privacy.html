@@ -1,33 +1,39 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="{{ lang }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Conquisterco — privacy</title>
+  <title>Conquisterco — {{ T.privacy }}</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
-    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">privacy</span></div>
-    <div class="auth"><a href="/"><button>← mappa</button></a></div>
+    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">{{ T.tag_privacy }}</span></div>
+    <div class="auth">
+      <span class="lang-sel">
+        <a href="/lang/it" class="{{ 'lang-on' if lang == 'it' else '' }}">IT</a>
+        <a href="/lang/en" class="{{ 'lang-on' if lang == 'en' else '' }}">EN</a>
+      </span>
+      <a href="/"><button>{{ T.btn_map }}</button></a>
+    </div>
   </header>
 
   <div class="prof-wrap">
     <div class="card" style="max-width:640px;margin:0 auto">
-      <h1 style="margin-top:0">La privacy, in due parole 🔒</h1>
-      <p class="muted">Niente giri di parole: ecco cosa succede ai tuoi dati.</p>
+      <h1 style="margin-top:0">{{ T.priv_title }}</h1>
+      <p class="muted">{{ T.priv_intro }}</p>
 
       <ul class="privacy-list">
-        <li>🎮 <b>È un gioco tra amici.</b> Non è un prodotto, non c'è pubblicità, non vendiamo né condividiamo niente con nessuno.</li>
-        <li>👀 <b>Chi non fa login</b> vede solo la mappa dei territori e le classifiche, coi nomi in forma abbreviata (tipo <i>Mario_R</i>). <b>Nessun pin GPS, nessuna foto.</b></li>
-        <li>🔒 <b>I pin dei singoli depositi e i selfie</b> li vedono <b>solo i membri del gruppo che hanno fatto login</b>.</li>
-        <li>📍 <b>Le coordinate</b> servono solo a capire in che comune sei. Per farlo, <b>una volta sola</b>, sono state chieste a OpenStreetMap (per il comune) e a open-meteo (per la quota); i risultati restano qui e non ci torniamo più.</li>
-        <li>🐰 Se un deposito non ha selfie, mostriamo un coniglio. Nessun problema.</li>
-        <li>🗑️ <b>Puoi cancellare tutto quando vuoi.</b> Dal tuo profilo, un pulsante rimuove profilo, depositi, foto e conquiste. Sparisce davvero, per sempre.</li>
-        <li>🏠 <b>I dati stanno sul nostro server</b>, tra di noi. Nessun terzo ci mette il naso.</li>
+        <li>{{ T.priv_1 | safe }}</li>
+        <li>{{ T.priv_2 | safe }}</li>
+        <li>{{ T.priv_3 | safe }}</li>
+        <li>{{ T.priv_4 | safe }}</li>
+        <li>{{ T.priv_5 | safe }}</li>
+        <li>{{ T.priv_6 | safe }}</li>
+        <li>{{ T.priv_7 | safe }}</li>
       </ul>
 
-      <p class="muted">Per qualsiasi dubbio, chiedi nel gruppo. Buone cacate. 💩</p>
+      <p class="muted">{{ T.priv_outro }}</p>
     </div>
   </div>
 </body>

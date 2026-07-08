@@ -140,16 +140,9 @@ def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
     ):
         nw = names.get(f["nw"]) if f["nw"] else None
         p = names.get(f["p"]) if f["p"] else None
-        if nw is None:
-            text = f"{f['tn']} è diventato conteso"
-            kind = "contested"
-        elif p is None:
-            text = f"{nw} ha conquistato {f['tn']}"
-            kind = "conquer"
-        else:
-            text = f"{nw} ha strappato {f['tn']} a {p}"
-            kind = "steal"
-        out.append({"ts": f["ts"], "text": text, "kind": kind})
+        kind = "contested" if nw is None else ("conquer" if p is None else "steal")
+        # frase costruita lato client (i18n): forniamo i pezzi
+        out.append({"ts": f["ts"], "kind": kind, "actor": nw, "territory": f["tn"], "prev": p})
     return out
 
 
@@ -172,7 +165,8 @@ def my_stats(conn: sqlite3.Connection, uid: int) -> dict | None:
     ).fetchone()
 
     recs = records(conn)
-    held = [lab for key, lab in _RECORD_LABELS.items()
+    # chiavi dei record detenuti (tradotte nel template)
+    held = [key for key in _RECORD_LABELS
             if recs.get(key) and recs[key]["user_id"] == uid]
 
     return {
@@ -274,20 +268,25 @@ def list_users(conn: sqlite3.Connection) -> list[dict]:
     ]
 
 
-def achievements(conn: sqlite3.Connection) -> list[dict]:
-    """Legenda dei badge: nome, descrizione, icona + quanti li hanno presi."""
-    return [
-        {"code": r["code"], "name": r["name"], "description": r["description"],
-         "icon": r["icon_ref"], "type": r["type"], "holders": r["holders"]}
-        for r in conn.execute(
-            """SELECT a.code, a.name, a.description, a.icon_ref, a.type,
-                      COUNT(DISTINCT w.user_id) AS holders
-               FROM achievements a
-               LEFT JOIN awards w ON w.achievement_id = a.id
-               WHERE a.active = 1
-               GROUP BY a.id ORDER BY a.name"""
-        )
-    ]
+def achievements(conn: sqlite3.Connection, t: dict | None = None) -> list[dict]:
+    """Legenda dei badge: nome, descrizione, icona + quanti li hanno presi.
+    Se `t` (tabella traduzioni) è dato, nome/descrizione sono tradotti per codice."""
+    out = []
+    for r in conn.execute(
+        """SELECT a.code, a.name, a.description, a.icon_ref, a.type,
+                  COUNT(DISTINCT w.user_id) AS holders
+           FROM achievements a
+           LEFT JOIN awards w ON w.achievement_id = a.id
+           WHERE a.active = 1
+           GROUP BY a.id ORDER BY a.name"""
+    ):
+        name, desc = r["name"], r["description"]
+        if t:
+            name = t.get(f"ach_{r['code']}", name)
+            desc = t.get(f"ach_{r['code']}_d", desc)
+        out.append({"code": r["code"], "name": name, "description": desc,
+                    "icon": r["icon_ref"], "type": r["type"], "holders": r["holders"]})
+    return out
 
 
 def territory_detail(conn: sqlite3.Connection, osm_id: int) -> dict:

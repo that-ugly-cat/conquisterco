@@ -13,6 +13,9 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .auth button{padding:.3rem .7rem;border:0;border-radius:5px;background:var(--accent);color:#fff;cursor:pointer}
 .badge-ok{font-size:.75rem;background:#3c7a3c;padding:.2rem .5rem;border-radius:5px}
 .auth a{text-decoration:none}
+.lang-sel{display:inline-flex;gap:.25rem;font-size:.72rem}
+.lang-sel a{color:var(--cream);opacity:.55;text-decoration:none;padding:.1rem .25rem;border-radius:4px}
+.lang-sel a.lang-on{opacity:1;background:rgba(255,255,255,.18);font-weight:700}
 .mini-link{color:var(--cream);opacity:.75;font-size:.78rem;text-decoration:none}
 .mini-link:hover{opacity:1;text-decoration:underline}
 .privacy-list{list-style:none;padding:0;margin:1rem 0}
