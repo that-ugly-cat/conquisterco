@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conquisterco — {{ s.name }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">profilo</span></div>
+    <div class="auth">
+      <span class="badge-ok">{{ me }}</span>
+      {% if admin %}<a href="/admin"><button>admin</button></a>{% endif %}
+      <a href="/"><button>← mappa</button></a>
+      <form method="post" action="/logout"><button>esci</button></form>
+    </div>
+  </header>
+
+  <div class="prof-wrap">
+    <h1><span class="swatch" style="background:{{ s.color or '#6F4E37' }}"></span>{{ s.name }}</h1>
+
+    <div class="prof-grid">
+      <!-- Statistiche -->
+      <section class="card">
+        <h2>Statistiche</h2>
+        <div class="stat-grid">
+          <div><b>#{{ s.rank or '—' }}</b><span>su {{ s.players }}</span></div>
+          <div><b>{{ s.comuni }}</b><span>comuni posseduti</span></div>
+          <div><b>{{ s.km2 }}</b><span>km² controllati</span></div>
+          <div><b>{{ s.deposits }}</b><span>depositi totali</span></div>
+          <div><b>{{ s.comuni_visitati }}</b><span>comuni visitati</span></div>
+          <div><b>{{ s.nazioni }}</b><span>nazioni</span></div>
+          <div><b>{{ s.regioni }}</b><span>regioni</span></div>
+          <div><b>{{ s.streak }}</b><span>streak (giorni)</span></div>
+        </div>
+        <p class="muted">Dal {{ (s.primo or '')[:10] }} al {{ (s.ultimo or '')[:10] }}</p>
+        {% if s.records %}<p><b>Record detenuti:</b> {{ s.records | join(', ') }}</p>{% endif %}
+        <h3>Badge ({{ s.badges | length }})</h3>
+        <p>{% for b in s.badges %}{{ b.icon or '🏅' }} {{ b.name }}{% if b.count > 1 %} ×{{ b.count }}{% endif %}<br>{% else %}<i>nessun badge</i>{% endfor %}</p>
+      </section>
+
+      <!-- Identità -->
+      <section class="card">
+        <h2>Identità</h2>
+        <div class="img-row">
+          <div>
+            <div class="img-label">Avatar</div>
+            {% if s.has_avatar %}<img class="prof-img" src="/media/avatar/{{ s.id }}?v={{ range(99999) | random }}">{% else %}<div class="prof-img empty">nessuno</div>{% endif %}
+            <form method="post" action="/me/avatar" enctype="multipart/form-data">
+              <input type="file" name="file" accept="image/*" required><button>carica</button>
+            </form>
+          </div>
+          <div>
+            <div class="img-label">Bandiera <span class="muted">(sui comuni della mappa)</span></div>
+            {% if s.has_flag %}<img class="prof-img" src="/media/flag/{{ s.id }}?v={{ range(99999) | random }}">{% else %}<div class="prof-img empty">nessuna</div>{% endif %}
+            <form method="post" action="/me/flag" enctype="multipart/form-data">
+              <input type="file" name="file" accept="image/*" required><button>carica</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Password -->
+      <section class="card">
+        <h2>Password</h2>
+        <form method="post" action="/me/password" class="stacked">
+          <input type="password" name="current" placeholder="password attuale" required>
+          <input type="password" name="new" placeholder="nuova password" required>
+          <button>cambia</button>
+        </form>
+      </section>
+
+      <!-- Danger zone -->
+      <section class="card danger">
+        <h2>Zona pericolosa</h2>
+        <p class="muted">Cancella profilo e <b>tutti</b> i tuoi dati (depositi, foto, conquiste). Irreversibile.</p>
+        <button class="btn-danger" onclick="document.getElementById('confirm').classList.remove('hidden')">Cancella tutto</button>
+      </section>
+    </div>
+  </div>
+
+  <div id="confirm" class="modal hidden">
+    <div class="modal-box">
+      <h2>Sei sicuro?</h2>
+      <p>Questo cancella <b>definitivamente</b> il tuo profilo e ogni tuo deposito. I comuni che possiedi torneranno liberi. Non si torna indietro.</p>
+      <div class="modal-actions">
+        <button onclick="document.getElementById('confirm').classList.add('hidden')">Annulla</button>
+        <form method="post" action="/me/delete"><button class="btn-danger">Sì, cancella tutto</button></form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

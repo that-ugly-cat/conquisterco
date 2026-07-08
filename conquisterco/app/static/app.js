@@ -70,8 +70,10 @@ async function loadAreas(force) {
     areaLayer.addLayer(gj);
 
     if (f.centroid) {
-      const label = f.is_contested ? "?" : (f.owner_name ? f.owner_name[0] : "·");
-      flagLayer.addLayer(L.marker(f.centroid, { icon: pinIcon(f.owner_color, label, f.is_contested) }));
+      const icon = (f.owner_flag && !f.is_contested)
+        ? L.divIcon({ className: "", html: `<img class="flag-pin" src="${f.owner_flag}">`, iconSize: [28, 28], iconAnchor: [14, 28] })
+        : pinIcon(f.owner_color, f.is_contested ? "?" : (f.owner_name ? f.owner_name[0] : "·"), f.is_contested);
+      flagLayer.addLayer(L.marker(f.centroid, { icon }));
     }
   }
 }

@@ -5,7 +5,14 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from ..leaderboards import main_leaderboard, records
+from ..leaderboards import _streaks, main_leaderboard, records
+
+_RECORD_LABELS = {
+    "nord": "Più a Nord", "sud": "Più a Sud", "est": "Più a Est", "ovest": "Più a Ovest",
+    "piu_in_alto": "Più in alto", "piu_in_basso": "Più in basso", "trasferta": "Trasferta",
+    "esploratore": "Esploratore", "volume": "Volume", "passaporto": "Passaporto",
+    "streak": "Streak", "latifondista": "Latifondista",
+}
 
 
 def _names(conn):
@@ -81,6 +88,7 @@ def areas(conn: sqlite3.Connection, level: str) -> list[dict]:
             "owner_id": r["uid"],
             "owner_name": owner["display_name"] if owner else None,
             "owner_color": owner["color"] if owner else None,
+            "owner_flag": f"/media/flag/{r['uid']}" if owner and owner["flag_ref"] else None,
             "is_contested": bool(r["c"]),
             "count": r["cnt"] or 0,
         })
@@ -131,6 +139,71 @@ def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
             kind = "steal"
         out.append({"ts": f["ts"], "text": text, "kind": kind})
     return out
+
+
+def my_stats(conn: sqlite3.Connection, uid: int) -> dict | None:
+    """Statistiche personali per la pagina profilo."""
+    u = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+    if u is None:
+        return None
+    prof = profile(conn, uid)  # comuni, km2, territories, badges
+
+    lb = main_leaderboard(conn)
+    rank = next((i + 1 for i, r in enumerate(lb) if r["user_id"] == uid), None)
+
+    c = conn.execute(
+        """SELECT COUNT(*) tot, COUNT(DISTINCT d.territory_osm_id) comuni,
+                  COUNT(DISTINCT t.country) nazioni, COUNT(DISTINCT t.region_osm_id) regioni,
+                  MIN(d.ts) first, MAX(d.ts) last
+           FROM deposits d LEFT JOIN territories t ON t.osm_id = d.territory_osm_id
+           WHERE d.user_id=?""", (uid,)
+    ).fetchone()
+
+    recs = records(conn)
+    held = [lab for key, lab in _RECORD_LABELS.items()
+            if recs.get(key) and recs[key]["user_id"] == uid]
+
+    return {
+        "id": uid, "name": u["display_name"], "color": u["color"],
+        "has_avatar": bool(u["avatar_ref"]), "has_flag": bool(u["flag_ref"]),
+        "rank": rank, "players": len(lb),
+        "comuni": prof["comuni"], "km2": prof["km2"],
+        "deposits": c["tot"], "comuni_visitati": c["comuni"],
+        "nazioni": c["nazioni"], "regioni": c["regioni"],
+        "streak": _streaks(conn).get(uid, 0),
+        "primo": c["first"], "ultimo": c["last"],
+        "badges": prof["badges"], "records": held,
+    }
+
+
+def delete_user(conn: sqlite3.Connection, uid: int, media_dir) -> None:
+    """Cancella l'utente e TUTTI i suoi dati (depositi + media), poi rigenera lo
+    stato derivato senza di lui. Irreversibile."""
+    from pathlib import Path
+
+    from ..pipeline import finalize
+
+    media_dir = Path(media_dir)
+    refs = [r["photo_ref"] for r in conn.execute(
+        "SELECT photo_ref FROM deposits WHERE user_id=? AND photo_ref IS NOT NULL", (uid,))]
+    urow = conn.execute("SELECT avatar_ref, flag_ref FROM users WHERE id=?", (uid,)).fetchone()
+
+    # svuota le tabelle derivate (referenziano depositi/utenti); finalize le
+    # ricostruisce. Va fatto prima di cancellare i depositi per non violare i FK.
+    for tbl in ("awards", "flips", "aggregate_ownership", "territory_ownership", "standings"):
+        conn.execute(f"DELETE FROM {tbl}")
+    conn.execute("DELETE FROM deposits WHERE user_id=?", (uid,))
+    conn.commit()
+    finalize(conn)  # standings/ownership/flips/aggregati/awards senza l'utente
+    conn.execute("DELETE FROM users WHERE id=?", (uid,))
+    conn.commit()
+
+    for ref in refs + [urow["avatar_ref"], urow["flag_ref"]]:
+        if not ref:
+            continue
+        p = (media_dir / ref).resolve()
+        if str(p).startswith(str(media_dir.resolve())) and p.exists():
+            p.unlink()
 
 
 def list_users(conn: sqlite3.Connection) -> list[dict]:
