@@ -18,11 +18,25 @@ trasferta più lontana…) e achievement.
 
 ## Stato
 
-**Fase 0 — Spec.** Nessun codice ancora. Il design vive in:
+**Fase 1 — Motore di dominio.** Il cuore gira e ha i test verdi: ingestione
+normalizzata, geo-enrich pluggable, recompute (standings/ownership/flips),
+motore achievement a registry, leaderboard. Ancora niente dashboard/auth/bot
+(Fasi 3-5). Gira su sola stdlib.
 
 - [`SPEC.md`](SPEC.md) — specifica completa
 - [`schema.sql`](schema.sql) — schema DB (SQLite)
 - [`docs/whatsapp-import.md`](docs/whatsapp-import.md) — formato import storico
+- [`conquisterco/`](conquisterco/) — il motore · [`tests/`](tests/) — la suite
+
+## Come girare
+
+```bash
+uv run conquisterco-demo      # mondo fittizio + report end-to-end
+uv run --extra dev pytest     # test
+```
+
+Il demo semina 4 giocatori e uno scenario che innesca conquiste, furti e la
+gran parte dei badge, poi stampa classifica, record, feed dei flip e bacheca.
 
 ## Stack previsto
 
