@@ -10,8 +10,9 @@ services:
       # DB (conquisterco.db) e selfie (media/) persistono qui, fuori dall'immagine
       - ./data:/data
     environment:
-      # OBBLIGATORIO in produzione: senza, le sessioni saltano a ogni restart
-      CONQUISTERCO_SECRET: "CAMBIAMI_stringa_lunga_casuale"
+      # OBBLIGATORIO: secret di sessione, letto da ./.env (gitignored).
+      # Senza, le sessioni saltano a ogni restart. Errore chiaro se manca.
+      CONQUISTERCO_SECRET: "${CONQUISTERCO_SECRET:?metti CONQUISTERCO_SECRET in .env}"
       # niente auto-seed demo: si usano i dati veri messi in ./data
       CONQUISTERCO_DEMO: "0"
       CONQUISTERCO_DB: /data/conquisterco.db

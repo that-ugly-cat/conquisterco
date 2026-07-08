@@ -10,7 +10,9 @@ cd /opt/app
 git clone https://github.com/that-ugly-cat/conquisterco.git .   # prima volta
 git pull                                                        # aggiornamenti
 
-# imposta un secret di sessione fisso nel compose (CONQUISTERCO_SECRET)
+# secret di sessione fisso, in .env (gitignored)
+echo "CONQUISTERCO_SECRET=$(openssl rand -hex 32)" > .env
+
 docker compose up -d --build
 ```
 
