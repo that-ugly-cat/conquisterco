@@ -25,6 +25,8 @@ def test_my_stats():
     assert s["comuni_visitati"] == 2
     assert s["rank"] in (1, 2)
     assert isinstance(s["badges"], list)
+    assert len(s["activity"]) == 12          # istogramma 12 mesi
+    assert s["weight_kg"] == round(2 * 128 / 1000.0, 1)  # 2 depositi × ~128 g
 
 
 def test_delete_user_cancella_tutto(tmp_path):

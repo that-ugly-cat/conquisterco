@@ -46,6 +46,13 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .btn-danger{background:#c0392b !important}
 .modal-actions{display:flex;gap:.6rem;justify-content:flex-end;margin-top:1rem}
 .modal-actions form{display:inline}
+.card.wide{grid-column:1 / -1}
+.link-btn{background:none !important;border:0;color:var(--accent);cursor:pointer;font-size:.75rem;text-decoration:underline;padding:0}
+.histo{display:flex;align-items:flex-end;gap:.25rem;height:140px}
+.histo-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.histo-val{font-size:.6rem;color:var(--muted);text-align:center;line-height:1;height:.8rem}
+.histo-bar{width:100%;background:var(--brown);border-radius:3px 3px 0 0;min-height:2px}
+.histo-lab{font-size:.62rem;color:var(--muted);text-align:center;margin-top:.25rem}
 @media(max-width:680px){.prof-grid{grid-template-columns:1fr}.stat-grid{grid-template-columns:repeat(2,1fr)}}
 
 main{display:flex;height:calc(100% - 52px)}

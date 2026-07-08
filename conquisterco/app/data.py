@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import date
+
+# peso medio stimato di un deposito (g). Fonte: peso medio delle feci ~128 g.
+AVG_DUMP_G = 128
 
 from ..leaderboards import _streaks, main_leaderboard, records
 
@@ -173,7 +177,27 @@ def my_stats(conn: sqlite3.Connection, uid: int) -> dict | None:
         "streak": _streaks(conn).get(uid, 0),
         "primo": c["first"], "ultimo": c["last"],
         "badges": prof["badges"], "records": held,
+        "activity": monthly_activity(conn, uid),
+        "weight_kg": round(c["tot"] * AVG_DUMP_G / 1000.0, 1),
     }
+
+
+def monthly_activity(conn: sqlite3.Connection, uid: int, months: int = 12) -> list[dict]:
+    """Depositi per mese negli ultimi `months` mesi (istogramma). Mesi vuoti = 0."""
+    today = date.today()
+    seq = []
+    y, m = today.year, today.month
+    for i in range(months - 1, -1, -1):
+        mm, yy = m - i, y
+        while mm <= 0:
+            mm += 12
+            yy -= 1
+        seq.append((yy, mm))
+    counts = {r["ym"]: r["n"] for r in conn.execute(
+        "SELECT strftime('%Y-%m', ts) ym, COUNT(*) n FROM deposits WHERE user_id=? GROUP BY ym",
+        (uid,))}
+    return [{"ym": f"{yy:04d}-{mm:02d}", "month": mm, "year": yy,
+             "count": counts.get(f"{yy:04d}-{mm:02d}", 0)} for yy, mm in seq]
 
 
 def delete_user(conn: sqlite3.Connection, uid: int, media_dir) -> None:

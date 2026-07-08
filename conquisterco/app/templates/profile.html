@@ -21,6 +21,21 @@
     <h1><span class="swatch" style="background:{{ s.color or '#6F4E37' }}"></span>{{ s.name }}</h1>
 
     <div class="prof-grid">
+      <!-- Cacate ultimo anno -->
+      <section class="card wide">
+        <h2>Cacate — ultimo anno</h2>
+        {% set maxc = (s.activity | map(attribute='count') | max) or 1 %}
+        <div class="histo">
+          {% for a in s.activity %}
+          <div class="histo-col" title="{{ a.ym }}: {{ a.count }}">
+            <div class="histo-val">{{ a.count or '' }}</div>
+            <div class="histo-bar" style="height:{{ (a.count / maxc * 100) | round }}%"></div>
+            <div class="histo-lab">{{ "%02d"|format(a.month) }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
       <!-- Statistiche -->
       <section class="card">
         <h2>Statistiche</h2>
@@ -33,10 +48,11 @@
           <div><b>{{ s.nazioni }}</b><span>nazioni</span></div>
           <div><b>{{ s.regioni }}</b><span>regioni</span></div>
           <div><b>{{ s.streak }}</b><span>streak (giorni)</span></div>
+          <div title="stima: ~128 g a deposito"><b>{{ s.weight_kg }}</b><span>kg 💩 (stima)</span></div>
         </div>
         <p class="muted">Dal {{ (s.primo or '')[:10] }} al {{ (s.ultimo or '')[:10] }}</p>
         {% if s.records %}<p><b>Record detenuti:</b> {{ s.records | join(', ') }}</p>{% endif %}
-        <h3>Badge ({{ s.badges | length }})</h3>
+        <h3>Badge ({{ s.badges | length }}) <button class="link-btn" onclick="document.getElementById('legend').classList.remove('hidden')">cosa sono?</button></h3>
         <p>{% for b in s.badges %}{{ b.icon or '🏅' }} {{ b.name }}{% if b.count > 1 %} ×{{ b.count }}{% endif %}<br>{% else %}<i>nessun badge</i>{% endfor %}</p>
       </section>
 
@@ -77,6 +93,19 @@
         <p class="muted">Cancella profilo e <b>tutti</b> i tuoi dati (depositi, foto, conquiste). Irreversibile.</p>
         <button class="btn-danger" onclick="document.getElementById('confirm').classList.remove('hidden')">Cancella tutto</button>
       </section>
+    </div>
+  </div>
+
+  <div id="legend" class="modal hidden">
+    <div class="modal-box">
+      <span class="close" onclick="document.getElementById('legend').classList.add('hidden')">×</span>
+      <h2>Significato dei badge</h2>
+      {% for b in legend %}
+      <div class="badge-row"><div class="badge-ic">{{ b.icon or '🏅' }}</div>
+        <div><b>{{ b.name }}</b>
+          <span class="badge-holders">{% if b.holders %}· {{ b.holders }} l'hanno preso{% else %}· nessuno ancora{% endif %}</span>
+          <div class="badge-desc">{{ b.description }}</div></div></div>
+      {% endfor %}
     </div>
   </div>
 

@@ -218,6 +218,7 @@ def me_page(request: Request, conn=Depends(get_db)):
         return RedirectResponse("/", status_code=303)
     return templates.TemplateResponse(request, "profile.html", {
         "s": stats, "me": request.session.get("name"), "admin": is_admin(request),
+        "legend": data.achievements(conn),
     })
 
 
