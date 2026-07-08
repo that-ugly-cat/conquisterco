@@ -26,13 +26,20 @@ CREATE TABLE users (
 );
 
 CREATE TABLE territories (
-    osm_id        INTEGER PRIMARY KEY,          -- identità globale uniforme
-    name          TEXT    NOT NULL,
-    admin_level   INTEGER,                      -- livello OSM del comune
-    country       TEXT,
-    region        TEXT,
-    area_km2      REAL,                         -- leaderboard km²
-    geometry_ref  TEXT                          -- path/riferimento poligono OSM
+    osm_id            INTEGER PRIMARY KEY,       -- identità globale uniforme (comune)
+    name              TEXT    NOT NULL,
+    admin_level       INTEGER,                   -- livello OSM del comune
+    country           TEXT,
+    region            TEXT,
+    province          TEXT,
+    -- catena amministrativa: link agli aggregati (per la logica A e il LOD)
+    province_osm_id   INTEGER,
+    region_osm_id     INTEGER,
+    country_osm_id    INTEGER,
+    area_km2          REAL,                      -- leaderboard km²
+    centroid_lat      REAL,                      -- dove piantare la bandierina
+    centroid_lon      REAL,
+    geometry_geojson  TEXT                       -- poligono comune (coropletica)
 );
 
 -- ---------------------------------------------------------------------------
@@ -123,3 +130,39 @@ CREATE TABLE awards (
 CREATE INDEX idx_awards_user ON awards(user_id);
 -- one-shot: un solo award per (achievement, utente). Ripetibili: gestiti in codice
 -- differenziando via context; questo indice resta parziale sui one-shot lato app.
+
+-- ---------------------------------------------------------------------------
+-- Livelli amministrativi aggregati + geocoding (mappa coropletica / LOD)
+-- ---------------------------------------------------------------------------
+
+-- Unità aggregate (provincia / regione / stato) con geometria, per il LOD.
+-- I comuni stanno in `territories`; qui i loro antenati.
+CREATE TABLE admin_units (
+    osm_id            INTEGER PRIMARY KEY,
+    kind              TEXT    NOT NULL CHECK (kind IN ('province', 'region', 'country')),
+    name              TEXT    NOT NULL,
+    parent_osm_id     INTEGER,                   -- antenato immediato (region→country, ...)
+    centroid_lat      REAL,
+    centroid_lon      REAL,
+    geometry_geojson  TEXT
+);
+
+-- Ownership aggregata (logica A: owner = chi controlla più comuni).  [derivata]
+CREATE TABLE aggregate_ownership (
+    unit_osm_id    INTEGER PRIMARY KEY REFERENCES admin_units(osm_id),
+    owner_user_id  INTEGER REFERENCES users(id),   -- NULL se conteso
+    is_contested   INTEGER NOT NULL DEFAULT 0,
+    comuni_owned   INTEGER NOT NULL DEFAULT 0      -- comuni dell'owner nell'unità
+);
+
+-- Cache del reverse-geocoding: coordinata → catena amministrativa risolta.
+-- Rende l'enrich idempotente e l'egress verso OSM una tantum. Le geometrie
+-- vivono in territories/admin_units (una per unità), qui solo la mappatura.
+CREATE TABLE geocode_cache (
+    lat            REAL NOT NULL,
+    lon            REAL NOT NULL,
+    comune_osm_id  INTEGER,                        -- NULL = fuori copertura / mare
+    payload_json   TEXT NOT NULL,                  -- catena risolta (osm_id per livello)
+    geocoded_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (lat, lon)
+);

@@ -26,11 +26,17 @@ def _persist_awards(conn: sqlite3.Connection, awards) -> None:
     conn.commit()
 
 
-def run_all(conn: sqlite3.Connection, geocoder: Geocoder, *, force_enrich: bool = False) -> dict:
-    """Esegue l'intera pipeline. Ritorna un piccolo riepilogo."""
-    enriched = enrich_deposits(conn, geocoder, force=force_enrich)
+def finalize(conn: sqlite3.Connection) -> dict:
+    """Passi post-enrich (validi per qualunque geocoder): recompute (standings,
+    ownership, flips, aggregati) + achievement."""
     recompute(conn)
     sync_achievements(conn)
     awards = evaluate(conn)
     _persist_awards(conn, awards)
-    return {"enriched": enriched, "awards": len(awards)}
+    return {"awards": len(awards)}
+
+
+def run_all(conn: sqlite3.Connection, geocoder: Geocoder, *, force_enrich: bool = False) -> dict:
+    """Pipeline completa col geocoder fittizio (demo/test)."""
+    enriched = enrich_deposits(conn, geocoder, force=force_enrich)
+    return {"enriched": enriched, **finalize(conn)}

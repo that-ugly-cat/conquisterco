@@ -89,3 +89,29 @@ def recompute(conn: sqlite3.Connection) -> None:
         flips,
     )
     conn.commit()
+    recompute_aggregates(conn)
+
+
+def recompute_aggregates(conn: sqlite3.Connection) -> None:
+    """Ownership degli aggregati (logica A): owner di provincia/regione/stato =
+    chi vi possiede più comuni (max stretto, parità = conteso). Derivata dai
+    comuni via i link di parentela in `territories`. Rigenerabile."""
+    conn.execute("DELETE FROM aggregate_ownership")
+    for col in ("province_osm_id", "region_osm_id", "country_osm_id"):
+        by_unit: dict[int, dict[int, int]] = defaultdict(dict)
+        rows = conn.execute(
+            f"""SELECT t.{col} AS unit, o.owner_user_id AS uid, COUNT(*) AS c
+                FROM territory_ownership o JOIN territories t ON t.osm_id = o.territory_osm_id
+                WHERE o.owner_user_id IS NOT NULL AND t.{col} IS NOT NULL
+                GROUP BY t.{col}, o.owner_user_id"""
+        ).fetchall()
+        for r in rows:
+            by_unit[r["unit"]][r["uid"]] = r["c"]
+        for unit, counts in by_unit.items():
+            owner, top, contested = owner_of(counts)
+            conn.execute(
+                """INSERT OR REPLACE INTO aggregate_ownership
+                   (unit_osm_id, owner_user_id, is_contested, comuni_owned) VALUES (?,?,?,?)""",
+                (unit, owner, int(contested), top),
+            )
+    conn.commit()
