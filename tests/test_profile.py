@@ -29,6 +29,26 @@ def test_my_stats():
     assert s["weight_kg"] == round(2 * 128 / 1000.0, 1)  # 2 depositi × ~128 g
 
 
+def test_merge_users():
+    from conquisterco.ingest import add_user
+    conn = fresh_db(":memory:")
+    real = add_user(conn, "Hannes_S")
+    prov = add_user(conn, "tg_hannes")
+    conn.execute("UPDATE users SET telegram_user_id=999, provisional=1 WHERE id=?", (prov,))
+    conn.commit()
+    dep(conn, real, 1012, "2024-01-01 10:00:00")   # Roma
+    dep(conn, prov, 1003, "2024-01-02 10:00:00")   # Milano
+    run_all(conn, FakeGeocoder())
+
+    assert data.merge_users(conn, prov, real) is True
+    assert conn.execute("SELECT COUNT(*) FROM users WHERE id=?", (prov,)).fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM deposits WHERE user_id=?", (real,)).fetchone()[0] == 2
+    assert conn.execute("SELECT telegram_user_id FROM users WHERE id=?", (real,)).fetchone()[0] == 999
+    # ora Hannes_S possiede sia Roma sia Milano
+    assert conn.execute("SELECT COUNT(*) FROM territory_ownership WHERE owner_user_id=?",
+                        (real,)).fetchone()[0] == 2
+
+
 def test_delete_solo_selfie(tmp_path):
     from conquisterco.db import fresh_db
     from conquisterco.ingest import add_deposit, add_user

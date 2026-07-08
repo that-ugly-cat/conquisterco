@@ -373,18 +373,51 @@ def gallery(conn: sqlite3.Connection, user_id: int, limit: int = 1000) -> dict |
 
 
 def list_users(conn: sqlite3.Connection) -> list[dict]:
-    """Anagrafica per il pannello admin: chi ha già una password impostata."""
+    """Anagrafica per il pannello admin."""
     return [
         {"id": r["id"], "name": r["display_name"],
          "public": r["public_name"] or r["display_name"], "role": r["role"],
          "has_password": bool(r["password_hash"]),
-         "deposits": r["n"]}
+         "telegram": r["telegram_id"], "tg_linked": bool(r["telegram_user_id"]),
+         "provisional": bool(r["provisional"]), "deposits": r["n"]}
         for r in conn.execute(
             """SELECT u.id, u.display_name, u.public_name, u.role, u.password_hash,
+                      u.telegram_id, u.telegram_user_id, u.provisional,
                       (SELECT COUNT(*) FROM deposits d WHERE d.user_id=u.id) AS n
                FROM users u ORDER BY n DESC, u.display_name"""
         )
     ]
+
+
+def merge_users(conn: sqlite3.Connection, src: int, dst: int) -> bool:
+    """Fonde l'utente `src` in `dst`: sposta i depositi, porta l'identità Telegram
+    su `dst`, rigenera lo stato e cancella `src`. Per unire un provvisorio del bot
+    nell'account reale. Ritorna False se non applicabile."""
+    from ..pipeline import finalize
+    if src == dst:
+        return False
+    s = conn.execute("SELECT telegram_user_id, telegram_id FROM users WHERE id=?", (src,)).fetchone()
+    d = conn.execute("SELECT telegram_user_id FROM users WHERE id=?", (dst,)).fetchone()
+    if s is None or d is None:
+        return False
+
+    conn.execute("UPDATE deposits SET user_id=? WHERE user_id=?", (dst, src))
+    # rilascia l'id Telegram su src (è UNIQUE) e portalo su dst se dst non ne ha
+    conn.execute("UPDATE users SET telegram_user_id=NULL WHERE id=?", (src,))
+    if s["telegram_user_id"] is not None and d["telegram_user_id"] is None:
+        conn.execute("UPDATE users SET telegram_user_id=? WHERE id=?", (s["telegram_user_id"], dst))
+    if s["telegram_id"]:  # preferisci l'@username del provvisorio all'eventuale numero
+        conn.execute("UPDATE users SET telegram_id=? WHERE id=?", (s["telegram_id"], dst))
+    conn.execute("DELETE FROM tg_link_tokens WHERE user_id=?", (src,))
+    if s["telegram_user_id"] is not None:
+        conn.execute("DELETE FROM tg_pending_photo WHERE telegram_user_id=?", (s["telegram_user_id"],))
+    # derivate → finalize ricostruisce senza src
+    for tbl in ("awards", "flips", "aggregate_ownership", "territory_ownership", "standings"):
+        conn.execute(f"DELETE FROM {tbl}")
+    conn.execute("DELETE FROM users WHERE id=?", (src,))
+    conn.commit()
+    finalize(conn)
+    return True
 
 
 def achievements(conn: sqlite3.Connection, t: dict | None = None) -> list[dict]:

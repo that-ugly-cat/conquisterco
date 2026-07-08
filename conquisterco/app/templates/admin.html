@@ -23,11 +23,12 @@
   <div class="admin-wrap">
     <h2>{{ T.adm_users }}</h2>
     <table class="admin-table">
-      <tr><th>{{ T.th_player }}</th><th>{{ T.adm_public }}</th><th>{{ T.adm_role }}</th><th>{{ T.adm_deposits }}</th><th>{{ T.adm_password }}</th><th>{{ T.adm_actions }}</th></tr>
+      <tr><th>{{ T.th_player }}</th><th>{{ T.adm_public }}</th><th>{{ T.adm_telegram }}</th><th>{{ T.adm_role }}</th><th>{{ T.adm_deposits }}</th><th>{{ T.adm_password }}</th><th>{{ T.adm_actions }}</th></tr>
       {% for u in users %}
       <tr>
         <td><span class="swatch" style="background:{{ u.color or '#6F4E37' }}"></span>{{ u.name }}</td>
         <td>{{ u.public }}</td>
+        <td>{% if u.provisional %}<span style="color:#c0392b;font-weight:600">{{ T.adm_provisional }}</span> {% endif %}{{ u.telegram or ('✓' if u.tg_linked else '—') }}</td>
         <td>{{ u.role }}</td>
         <td class="num">{{ u.deposits }}</td>
         <td>{{ "✓" if u.has_password else "—" }}</td>
@@ -53,6 +54,17 @@
       <input type="password" name="password" placeholder="{{ T.login_pw }}" required>
       <select name="role"><option value="user">user</option><option value="admin">admin</option></select>
       <button>{{ T.adm_create }}</button>
+    </form>
+
+    <h2>{{ T.adm_merge_title }}</h2>
+    <p class="muted">{{ T.adm_merge_hint }}</p>
+    <form method="post" action="/admin/merge" class="admin-create"
+          onsubmit="return confirm('{{ T.adm_merge_title }}?')">
+      <span>{{ T.adm_merge_absorb }}</span>
+      <select name="from_user">{% for u in users %}<option value="{{ u.id }}">{{ u.name }}{% if u.provisional %} ({{ T.adm_provisional }}){% endif %}</option>{% endfor %}</select>
+      <span>{{ T.adm_merge_into }}</span>
+      <select name="into_user">{% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select>
+      <button class="btn-danger">{{ T.adm_merge_btn }}</button>
     </form>
   </div>
 </body>

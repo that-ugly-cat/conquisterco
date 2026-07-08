@@ -422,6 +422,14 @@ def admin_role(request: Request, user_id: int = Form(...),
     return RedirectResponse("/admin", status_code=303)
 
 
+@app.post("/admin/merge")
+def admin_merge(request: Request, from_user: int = Form(...),
+                into_user: int = Form(...), conn=Depends(get_db)):
+    require_admin(request)
+    data.merge_users(conn, from_user, into_user)   # unisce from_user in into_user
+    return RedirectResponse("/admin", status_code=303)
+
+
 # --- Bot Telegram ----------------------------------------------------------
 
 @app.post("/tg/{secret}")
