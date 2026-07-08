@@ -13,5 +13,8 @@ __pycache__/
 /media/
 /uploads/
 
+# Dati storici (export WhatsApp: selfie, GPS, nomi — MAI committare)
+/historical_data/
+
 # OS
 .DS_Store

@@ -106,6 +106,22 @@ Set iniziale:
 
 Il set crescerà: l'architettura è progettata per aggiunte a basso costo.
 
+### Backlog badge — livelli amministrativi (futuri)
+
+Quando la mappa avrà gli aggregati (stato → regione → provincia, vedi §7), la
+stessa logica abilita badge di livello superiore. Da valutare, non ancora
+implementati:
+
+- **Governatore** — possiedi un'intera provincia (tutti i suoi comuni).
+- **Viceré** — possiedi un'intera regione.
+- **Re della Padania** / titoli regionali — sei owner (per comuni controllati)
+  di una regione-simbolo.
+- **Anschluss** — diventi owner-aggregato di un intero stato.
+- **Guerra dei cent'anni** — strappi una regione al suo owner-aggregato
+  precedente (flip a livello regione).
+- **Cordone sanitario** — possiedi tutte le province confinanti con una che non
+  è tua (richiede adiacenze, più avanti).
+
 ---
 
 ## 7. Mappa & dashboard
