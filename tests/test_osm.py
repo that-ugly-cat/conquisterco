@@ -146,3 +146,19 @@ def test_aggregate_ownership_logica_a():
     # regione 100: A possiede 2 comuni, B 1 → owner = A
     row = conn.execute("SELECT owner_user_id, is_contested, comuni_owned FROM aggregate_ownership WHERE unit_osm_id=100").fetchone()
     assert row["owner_user_id"] == a and row["is_contested"] == 0 and row["comuni_owned"] == 2
+
+
+def test_aggregato_conteso_se_comuni_tutti_contesi():
+    conn = fresh_db(":memory:")
+    a = mkuser(conn, "A")
+    b = mkuser(conn, "B")
+    # A e B pareggiano sullo stesso comune (regione 100) → comune conteso
+    add_deposit(conn, user_id=a, ts="2024-01-01 10:00:00", lat=45.10, lon=11.10, source="telegram")
+    add_deposit(conn, user_id=b, ts="2024-01-02 10:00:00", lat=45.10, lon=11.10, source="telegram")
+    enrich_deposits_osm(conn, _FakeResolver({(45.1, 11.1): _res(1)}))
+    recompute(conn)
+
+    assert conn.execute("SELECT is_contested FROM territory_ownership WHERE territory_osm_id=1").fetchone()[0] == 1
+    # la regione 100 (unico comune, conteso) è CONTESA, non senza riga/owner
+    row = conn.execute("SELECT owner_user_id, is_contested FROM aggregate_ownership WHERE unit_osm_id=100").fetchone()
+    assert row is not None and row["owner_user_id"] is None and row["is_contested"] == 1

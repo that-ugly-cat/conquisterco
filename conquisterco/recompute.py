@@ -94,21 +94,28 @@ def recompute(conn: sqlite3.Connection) -> None:
 
 def recompute_aggregates(conn: sqlite3.Connection) -> None:
     """Ownership degli aggregati (logica A): owner di provincia/regione/stato =
-    chi vi possiede più comuni (max stretto, parità = conteso). Derivata dai
-    comuni via i link di parentela in `territories`. Rigenerabile."""
+    chi vi possiede più comuni (max stretto, parità = conteso). Un'unità i cui
+    comuni sono TUTTI contesi (nessun owner) è essa stessa contesa, non "senza
+    owner". Derivata dai comuni via i link di parentela. Rigenerabile."""
     conn.execute("DELETE FROM aggregate_ownership")
     for col in ("province_osm_id", "region_osm_id", "country_osm_id"):
         by_unit: dict[int, dict[int, int]] = defaultdict(dict)
+        touched: set[int] = set()   # unità con almeno un comune membro toccato
         rows = conn.execute(
-            f"""SELECT t.{col} AS unit, o.owner_user_id AS uid, COUNT(*) AS c
+            f"""SELECT t.{col} AS unit, o.owner_user_id AS uid
                 FROM territory_ownership o JOIN territories t ON t.osm_id = o.territory_osm_id
-                WHERE o.owner_user_id IS NOT NULL AND t.{col} IS NOT NULL
-                GROUP BY t.{col}, o.owner_user_id"""
+                WHERE t.{col} IS NOT NULL"""
         ).fetchall()
         for r in rows:
-            by_unit[r["unit"]][r["uid"]] = r["c"]
-        for unit, counts in by_unit.items():
+            touched.add(r["unit"])
+            if r["uid"] is not None:
+                d = by_unit[r["unit"]]
+                d[r["uid"]] = d.get(r["uid"], 0) + 1
+        for unit in touched:
+            counts = by_unit.get(unit, {})
             owner, top, contested = owner_of(counts)
+            if not counts:          # nessun comune posseduto → aggregato conteso
+                contested = True
             conn.execute(
                 """INSERT OR REPLACE INTO aggregate_ownership
                    (unit_osm_id, owner_user_id, is_contested, comuni_owned) VALUES (?,?,?,?)""",
