@@ -17,3 +17,10 @@ services:
       CONQUISTERCO_DEMO: "0"
       CONQUISTERCO_DB: /data/conquisterco.db
       CONQUISTERCO_MEDIA: /data/media
+      # URL pubblico (per webhook + deep-link Telegram)
+      CONQUISTERCO_PUBLIC_URL: "${CONQUISTERCO_PUBLIC_URL:-https://conquisterco.borant.eu}"
+      # bot Telegram (token/segreti in .env; vuoti = bot disattivo)
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
+      TELEGRAM_WEBHOOK_SECRET: "${TELEGRAM_WEBHOOK_SECRET:-}"
+      TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID:-}"
+      TELEGRAM_BOT_USERNAME: "${TELEGRAM_BOT_USERNAME:-conquisterco_bot}"

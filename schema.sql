@@ -15,7 +15,9 @@ CREATE TABLE users (
     public_name   TEXT,                          -- nome mostrato su mappe/classifiche (fallback: display_name)
     color         TEXT,                         -- tinta sulla mappa
     wa_handle     TEXT,                         -- matching import storico WhatsApp
-    telegram_id   TEXT,                         -- bot di regime
+    telegram_id   TEXT,                         -- @username Telegram (match iniziale)
+    telegram_user_id INTEGER UNIQUE,            -- id numerico Telegram (chiave stabile)
+    provisional   INTEGER NOT NULL DEFAULT 0,   -- account creato dal bot, da reclamare
     avatar_ref    TEXT,                         -- immagine profilo
     flag_ref      TEXT,                         -- bandierina piantata sui comuni
     home_lat      REAL,                         -- home base (record "trasferta")
@@ -167,4 +169,22 @@ CREATE TABLE geocode_cache (
     payload_json   TEXT NOT NULL,                  -- catena risolta (osm_id per livello)
     geocoded_at    TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (lat, lon)
+);
+
+-- ---------------------------------------------------------------------------
+-- Bot Telegram
+-- ---------------------------------------------------------------------------
+
+-- Token monouso per il deep-link di collegamento (profilo web → account Telegram).
+CREATE TABLE tg_link_tokens (
+    token       TEXT PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id),
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Foto arrivata prima del pin: tenuta in sospeso per agganciarla al pin successivo.
+CREATE TABLE tg_pending_photo (
+    telegram_user_id INTEGER PRIMARY KEY,
+    file_id          TEXT NOT NULL,
+    ts               TEXT NOT NULL
 );

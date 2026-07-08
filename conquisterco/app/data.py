@@ -237,6 +237,7 @@ def my_stats(conn: sqlite3.Connection, uid: int) -> dict | None:
         "weight_kg": round(c["tot"] * AVG_DUMP_G / 1000.0, 1),
         "no_selfie": bool(u["no_selfie"]),
         "telegram_id": u["telegram_id"],
+        "telegram_linked": bool(u["telegram_user_id"]),
         "selfie_count": conn.execute(
             "SELECT COUNT(*) FROM deposits WHERE user_id=? AND photo_ref IS NOT NULL",
             (uid,)).fetchone()[0],

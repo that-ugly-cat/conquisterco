@@ -71,12 +71,17 @@
             <button>{{ T.save }}</button>
           </div>
         </form>
-        <form method="post" action="/me/telegram" style="display:block;margin-bottom:.9rem">
+        <form method="post" action="/me/telegram" style="display:block;margin-bottom:.6rem">
           <div class="img-label">{{ T.telegram }} <span class="muted">{{ T.telegram_hint }}</span></div>
           <div style="display:flex;gap:.35rem">
             <input name="telegram" value="{{ s.telegram_id or '' }}" placeholder="{{ T.telegram_ph }}" style="flex:1">
             <button>{{ T.save }}</button>
           </div>
+        </form>
+        <form method="post" action="/me/telegram-link" style="display:block;margin-bottom:.9rem">
+          <button>{{ T.tg_link }}</button>
+          {% if s.telegram_linked %}<span style="color:#3c7a3c;font-weight:600;margin-left:.4rem">{{ T.tg_linked }}</span>{% endif %}
+          <div class="muted" style="margin-top:.25rem;font-size:.76rem">{{ T.tg_link_hint }}</div>
         </form>
         <div class="img-row">
           <div>

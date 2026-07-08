@@ -14,11 +14,15 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from ..db import connect, init_db
 from ..geo import FakeGeocoder
+from ..geo_osm import OSMResolver
 from ..pipeline import run_all
 from ..seed import build_world, seed_deposits
-from . import data
+from . import bot, data
 from .auth import hash_password, verify_password
 from .translations import SUPPORTED_LANGUAGES, get_lang, get_t
+
+# resolver condiviso per i dump del bot (la cache dei genitori persiste)
+_tg_resolver = OSMResolver()
 
 APP_DIR = Path(__file__).resolve().parent
 _ROOT = APP_DIR.parent.parent
@@ -50,6 +54,18 @@ def _migrate(conn) -> None:
         # utenti esistenti: nome pubblico = username
         conn.execute("UPDATE users SET public_name=display_name WHERE public_name IS NULL")
         conn.commit()
+    if "telegram_user_id" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN telegram_user_id INTEGER")
+        conn.commit()
+    if "provisional" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN provisional INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+    conn.execute("""CREATE TABLE IF NOT EXISTS tg_link_tokens (
+        token TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+        created_at TEXT NOT NULL DEFAULT (datetime('now')))""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS tg_pending_photo (
+        telegram_user_id INTEGER PRIMARY KEY, file_id TEXT NOT NULL, ts TEXT NOT NULL)""")
+    conn.commit()
 
 
 def ensure_db() -> None:
@@ -303,6 +319,17 @@ def me_telegram(request: Request, telegram: str = Form(""), conn=Depends(get_db)
     return RedirectResponse("/me", status_code=303)
 
 
+@app.post("/me/telegram-link")
+def me_telegram_link(request: Request, conn=Depends(get_db)):
+    require_login(request)
+    token = secrets.token_urlsafe(12)
+    conn.execute("INSERT INTO tg_link_tokens (token, user_id) VALUES (?,?)",
+                 (token, request.session["uid"]))
+    conn.commit()
+    # apre Telegram sul bot con /start <token>: il bot collega e assorbe i provvisori
+    return RedirectResponse(f"https://t.me/{bot.BOT_USERNAME}?start={token}", status_code=303)
+
+
 @app.post("/me/selfies")
 def me_selfie_pref(request: Request, no_selfie: str = Form(None), conn=Depends(get_db)):
     require_login(request)
@@ -383,6 +410,28 @@ def admin_role(request: Request, user_id: int = Form(...),
         conn.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
         conn.commit()
     return RedirectResponse("/admin", status_code=303)
+
+
+# --- Bot Telegram ----------------------------------------------------------
+
+@app.post("/tg/{secret}")
+async def telegram_webhook(secret: str, request: Request, conn=Depends(get_db)):
+    if not bot.WEBHOOK_SECRET or secret != bot.WEBHOOK_SECRET:
+        raise HTTPException(status_code=404, detail="not found")
+    update = await request.json()
+    try:
+        bot.process_update(conn, update, client=bot.TelegramClient(),
+                           resolver=_tg_resolver, media_dir=MEDIA_DIR)
+    except Exception:
+        pass   # non far ritentare Telegram all'infinito per un errore isolato
+    return {"ok": True}
+
+
+@app.on_event("startup")
+def _register_webhook() -> None:
+    if bot.BOT_TOKEN and bot.WEBHOOK_SECRET and bot.PUBLIC_URL:
+        url = f"{bot.PUBLIC_URL.rstrip('/')}/tg/{bot.WEBHOOK_SECRET}"
+        bot.TelegramClient().set_webhook(url)
 
 
 def serve() -> None:
