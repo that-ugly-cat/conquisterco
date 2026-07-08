@@ -12,10 +12,12 @@
     <div class="brand">💩 <b>Conquisterco</b> <span class="tag">il Cacasto</span></div>
     <div class="auth">
       {% if logged %}
-        <span class="badge-ok">loggato</span>
+        <span class="badge-ok">{{ me }}</span>
+        {% if admin %}<a href="/admin"><button>admin</button></a>{% endif %}
         <form method="post" action="/logout"><button>esci</button></form>
       {% else %}
         <form method="post" action="/login" class="login">
+          <input name="username" placeholder="nome" autocomplete="username">
           <input type="password" name="password" placeholder="password" autocomplete="current-password">
           <button>entra</button>
         </form>

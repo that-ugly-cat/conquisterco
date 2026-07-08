@@ -16,6 +16,7 @@ from collections import Counter
 from pathlib import Path
 
 from ..ingest import add_deposit, add_user
+from ..util import anonymize_name
 from .whatsapp import date_range, detect_dumps, parse_chat, roster
 
 
@@ -64,10 +65,11 @@ def import_zip(conn: sqlite3.Connection, zip_path: str | Path, *,
             if allowed is not None and canon not in allowed:
                 stats["skipped_user"] += 1
                 continue
-            uid = users.get(canon)
+            display = anonymize_name(canon)   # 'Giovanni Spitale' → 'Giovanni_S'
+            uid = users.get(display)
             if uid is None:
-                uid = add_user(conn, canon, wa_handle=d.sender)
-                users[canon] = uid
+                uid = add_user(conn, display, wa_handle=canon)
+                users[display] = uid
             photo_ref = _copy_media(z, d.photo, media_dir, stem) if d.photo else None
             stats["with_photo" if photo_ref else "no_photo"] += 1
             did = add_deposit(

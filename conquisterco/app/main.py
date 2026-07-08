@@ -17,6 +17,7 @@ from ..geo import FakeGeocoder
 from ..pipeline import run_all
 from ..seed import build_world, seed_deposits
 from . import data
+from .auth import hash_password, verify_password
 
 APP_DIR = Path(__file__).resolve().parent
 _ROOT = APP_DIR.parent.parent
@@ -26,8 +27,6 @@ if not _default_db.exists():
     _default_db = _ROOT / "conquisterco.db"
 DB_PATH = os.environ.get("CONQUISTERCO_DB", str(_default_db))
 MEDIA_DIR = Path(os.environ.get("CONQUISTERCO_MEDIA", str(_ROOT / "media"))).resolve()
-# password condivisa minimale (Fase 4 la sostituirà con utenti/admin veri)
-SHARED_PASSWORD = os.environ.get("CONQUISTERCO_PASSWORD", "cacca")
 DEMO_SEED = os.environ.get("CONQUISTERCO_DEMO", "1") == "1"
 
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
@@ -62,12 +61,21 @@ def get_db():
 
 
 def is_logged(request: Request) -> bool:
-    return bool(request.session.get("auth"))
+    return request.session.get("uid") is not None
+
+
+def is_admin(request: Request) -> bool:
+    return request.session.get("role") == "admin"
 
 
 def require_login(request: Request) -> None:
     if not is_logged(request):
         raise HTTPException(status_code=401, detail="login richiesto")
+
+
+def require_admin(request: Request) -> None:
+    if not is_admin(request):
+        raise HTTPException(status_code=403, detail="serve un admin")
 
 
 ensure_db()
@@ -77,13 +85,21 @@ ensure_db()
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    return templates.TemplateResponse(request, "index.html", {"logged": is_logged(request)})
+    return templates.TemplateResponse(request, "index.html", {
+        "logged": is_logged(request), "admin": is_admin(request),
+        "me": request.session.get("name"),
+    })
 
 
 @app.post("/login")
-def login(request: Request, password: str = Form(...)):
-    if secrets.compare_digest(password, SHARED_PASSWORD):
-        request.session["auth"] = True
+def login(request: Request, username: str = Form(...), password: str = Form(...),
+          conn=Depends(get_db)):
+    row = conn.execute(
+        "SELECT id, role, password_hash, display_name FROM users WHERE display_name=?",
+        (username.strip(),),
+    ).fetchone()
+    if row and verify_password(password, row["password_hash"]):
+        request.session.update(uid=row["id"], role=row["role"], name=row["display_name"])
     return RedirectResponse("/", status_code=303)
 
 
@@ -97,7 +113,8 @@ def logout(request: Request):
 
 @app.get("/api/me")
 def api_me(request: Request):
-    return {"logged": is_logged(request)}
+    return {"logged": is_logged(request), "admin": is_admin(request),
+            "name": request.session.get("name")}
 
 
 @app.get("/api/map/territories")
@@ -159,6 +176,55 @@ def api_selfie(deposit_id: int, request: Request, conn=Depends(get_db)):
     if not str(path).startswith(str(MEDIA_DIR)) or not path.exists():
         raise HTTPException(status_code=404, detail="file non trovato")
     return FileResponse(path)
+
+
+# --- Admin (gestione utenti) ----------------------------------------------
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page(request: Request, conn=Depends(get_db)):
+    require_admin(request)
+    return templates.TemplateResponse(request, "admin.html", {
+        "users": data.list_users(conn), "me": request.session.get("name"),
+    })
+
+
+@app.post("/admin/create")
+def admin_create(request: Request, display_name: str = Form(...),
+                 password: str = Form(...), role: str = Form("user"),
+                 conn=Depends(get_db)):
+    require_admin(request)
+    if role not in ("user", "admin"):
+        role = "user"
+    name = display_name.strip()
+    existing = conn.execute("SELECT id FROM users WHERE display_name=?", (name,)).fetchone()
+    if existing:
+        conn.execute("UPDATE users SET role=?, password_hash=? WHERE id=?",
+                     (role, hash_password(password), existing["id"]))
+    else:
+        conn.execute("INSERT INTO users (display_name, role, password_hash) VALUES (?,?,?)",
+                     (name, role, hash_password(password)))
+    conn.commit()
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/reset")
+def admin_reset(request: Request, user_id: int = Form(...),
+                password: str = Form(...), conn=Depends(get_db)):
+    require_admin(request)
+    conn.execute("UPDATE users SET password_hash=? WHERE id=?",
+                 (hash_password(password), user_id))
+    conn.commit()
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/role")
+def admin_role(request: Request, user_id: int = Form(...),
+               role: str = Form(...), conn=Depends(get_db)):
+    require_admin(request)
+    if role in ("user", "admin"):
+        conn.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
+        conn.commit()
+    return RedirectResponse("/admin", status_code=303)
 
 
 def serve() -> None:

@@ -25,6 +25,7 @@ web = [
 conquisterco-demo = "conquisterco.seed:main"
 conquisterco-serve = "conquisterco.app.main:serve"
 conquisterco-import = "conquisterco.importers.cli:main"
+conquisterco-admin = "conquisterco.app.adminctl:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conquisterco — admin</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">admin</span></div>
+    <div class="auth">
+      <span class="badge-ok">{{ me }}</span>
+      <a href="/"><button>← mappa</button></a>
+      <form method="post" action="/logout"><button>esci</button></form>
+    </div>
+  </header>
+
+  <div class="admin-wrap">
+    <h2>Utenti</h2>
+    <table class="admin-table">
+      <tr><th>Giocatore</th><th>Ruolo</th><th>Depositi</th><th>Password</th><th>Azioni</th></tr>
+      {% for u in users %}
+      <tr>
+        <td><span class="swatch" style="background:{{ u.color or '#6F4E37' }}"></span>{{ u.name }}</td>
+        <td>{{ u.role }}</td>
+        <td class="num">{{ u.deposits }}</td>
+        <td>{{ "✓" if u.has_password else "—" }}</td>
+        <td class="admin-actions">
+          <form method="post" action="/admin/reset">
+            <input type="hidden" name="user_id" value="{{ u.id }}">
+            <input type="password" name="password" placeholder="nuova password" required>
+            <button>reset</button>
+          </form>
+          <form method="post" action="/admin/role">
+            <input type="hidden" name="user_id" value="{{ u.id }}">
+            <input type="hidden" name="role" value="{{ 'user' if u.role == 'admin' else 'admin' }}">
+            <button>{{ 'rendi user' if u.role == 'admin' else 'rendi admin' }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <h2>Nuovo utente</h2>
+    <form method="post" action="/admin/create" class="admin-create">
+      <input name="display_name" placeholder="nome (es. Mario_R)" required>
+      <input type="password" name="password" placeholder="password" required>
+      <select name="role"><option value="user">user</option><option value="admin">admin</option></select>
+      <button>crea</button>
+    </form>
+  </div>
+</body>
+</html>

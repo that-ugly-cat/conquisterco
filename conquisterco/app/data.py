@@ -133,6 +133,20 @@ def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
     return out
 
 
+def list_users(conn: sqlite3.Connection) -> list[dict]:
+    """Anagrafica per il pannello admin: chi ha già una password impostata."""
+    return [
+        {"id": r["id"], "name": r["display_name"], "role": r["role"],
+         "has_password": bool(r["password_hash"]),
+         "deposits": r["n"]}
+        for r in conn.execute(
+            """SELECT u.id, u.display_name, u.role, u.password_hash,
+                      (SELECT COUNT(*) FROM deposits d WHERE d.user_id=u.id) AS n
+               FROM users u ORDER BY n DESC, u.display_name"""
+        )
+    ]
+
+
 def achievements(conn: sqlite3.Connection) -> list[dict]:
     """Legenda dei badge: nome, descrizione, icona + quanti li hanno presi."""
     return [

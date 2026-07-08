@@ -12,6 +12,17 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .auth input{padding:.3rem .5rem;border:0;border-radius:5px}
 .auth button{padding:.3rem .7rem;border:0;border-radius:5px;background:var(--accent);color:#fff;cursor:pointer}
 .badge-ok{font-size:.75rem;background:#3c7a3c;padding:.2rem .5rem;border-radius:5px}
+.auth a{text-decoration:none}
+
+.admin-wrap{max-width:900px;margin:1.2rem auto;padding:0 1rem}
+.admin-wrap h2{color:var(--brown-d)}
+.admin-table{background:var(--paper);border:1px solid var(--line);border-radius:8px}
+.admin-table td,.admin-table th{padding:.5rem .6rem}
+.admin-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.admin-actions form{display:flex;gap:.3rem}
+.admin-actions input,.admin-create input,.admin-create select{padding:.3rem .5rem;border:1px solid var(--line);border-radius:5px}
+.admin-actions button,.admin-create button{padding:.3rem .6rem;border:0;border-radius:5px;background:var(--accent);color:#fff;cursor:pointer}
+.admin-create{display:flex;gap:.5rem;flex-wrap:wrap;background:var(--paper);padding:.8rem;border:1px solid var(--line);border-radius:8px}
 
 main{display:flex;height:calc(100% - 52px)}
 #map{flex:1;height:100%}
