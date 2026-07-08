@@ -81,19 +81,39 @@ def _contenders(conn: sqlite3.Connection, level: str) -> dict[int, list[str]]:
     else:
         col = {"province": "province_osm_id", "region": "region_osm_id",
                "country": "country_osm_id"}[level]
+        # comuni posseduti per unità/utente (per il pareggio tra owner)
         tally: dict[int, dict[int, int]] = defaultdict(dict)
+        units: set[int] = set()
         for r in conn.execute(
-            f"""SELECT t.{col} unit, o.owner_user_id u, COUNT(*) c
+            f"""SELECT t.{col} unit, o.owner_user_id u
                 FROM territory_ownership o JOIN territories t ON t.osm_id = o.territory_osm_id
-                WHERE o.owner_user_id IS NOT NULL AND t.{col} IS NOT NULL
-                GROUP BY t.{col}, o.owner_user_id"""
+                WHERE t.{col} IS NOT NULL"""
         ):
-            tally[r["unit"]][r["u"]] = r["c"]
-        for unit, d in tally.items():
-            top = max(d.values())
-            tied = sorted(u for u, c in d.items() if c == top)
-            if len(tied) > 1:
-                out[unit] = [_pub(users.get(u)) for u in tied]
+            units.add(r["unit"])
+            if r["u"] is not None:
+                d = tally[r["unit"]]
+                d[r["u"]] = d.get(r["u"], 0) + 1
+        # contendenti dei comuni contesi (per unità senza alcun comune posseduto)
+        from_contested: dict[int, set] = defaultdict(set)
+        for r in conn.execute(
+            f"""SELECT t.{col} unit, s.user_id u
+                FROM standings s
+                JOIN territory_ownership o ON o.territory_osm_id = s.territory_osm_id
+                JOIN territories t ON t.osm_id = s.territory_osm_id
+                WHERE o.is_contested = 1 AND s.deposit_count = o.top_count AND t.{col} IS NOT NULL"""
+        ):
+            from_contested[r["unit"]].add(r["u"])
+        for unit in units:
+            d = tally.get(unit, {})
+            if d:  # pareggio tra chi possiede più comuni
+                top = max(d.values())
+                tied = sorted(u for u, c in d.items() if c == top)
+                if len(tied) > 1:
+                    out[unit] = [_pub(users.get(u)) for u in tied]
+            else:  # nessun comune posseduto → i contendenti sono quelli dei comuni contesi
+                people = sorted(from_contested.get(unit, set()))
+                if people:
+                    out[unit] = [_pub(users.get(u)) for u in people]
     return out
 
 

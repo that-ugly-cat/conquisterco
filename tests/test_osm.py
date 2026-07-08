@@ -162,3 +162,8 @@ def test_aggregato_conteso_se_comuni_tutti_contesi():
     # la regione 100 (unico comune, conteso) è CONTESA, non senza riga/owner
     row = conn.execute("SELECT owner_user_id, is_contested FROM aggregate_ownership WHERE unit_osm_id=100").fetchone()
     assert row is not None and row["owner_user_id"] is None and row["is_contested"] == 1
+
+    # i contendenti dell'aggregato conteso arrivano dai comuni contesi
+    from conquisterco.app import data
+    reg = next(x for x in data.areas(conn, "region") if x["osm_id"] == 100)
+    assert reg["is_contested"] and set(reg["contenders"]) == {"A", "B"}
