@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# SQLite databases (schema.sql è tracciato; i .db no)
+*.db
+*.sqlite
+*.sqlite3
+
+# Media utenti / selfie
+/media/
+/uploads/
+
+# OS
+.DS_Store
