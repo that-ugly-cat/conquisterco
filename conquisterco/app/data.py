@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections import defaultdict
 from datetime import date
 
 # peso medio stimato di un deposito (g). Fonte: peso medio delle feci ~128 g.
@@ -65,11 +66,43 @@ def territories_geo(conn: sqlite3.Connection) -> list[dict]:
     return out
 
 
+def _contenders(conn: sqlite3.Connection, level: str) -> dict[int, list[str]]:
+    """Per le unità CONTESE, i giocatori in parità in testa (tra chi e chi)."""
+    users = _names(conn)
+    out: dict[int, list[str]] = defaultdict(list)
+    if level == "comune":
+        for r in conn.execute(
+            """SELECT s.territory_osm_id t, s.user_id u
+               FROM standings s JOIN territory_ownership o ON o.territory_osm_id = s.territory_osm_id
+               WHERE o.is_contested = 1 AND s.deposit_count = o.top_count
+               ORDER BY s.user_id"""
+        ):
+            out[r["t"]].append(_pub(users.get(r["u"])))
+    else:
+        col = {"province": "province_osm_id", "region": "region_osm_id",
+               "country": "country_osm_id"}[level]
+        tally: dict[int, dict[int, int]] = defaultdict(dict)
+        for r in conn.execute(
+            f"""SELECT t.{col} unit, o.owner_user_id u, COUNT(*) c
+                FROM territory_ownership o JOIN territories t ON t.osm_id = o.territory_osm_id
+                WHERE o.owner_user_id IS NOT NULL AND t.{col} IS NOT NULL
+                GROUP BY t.{col}, o.owner_user_id"""
+        ):
+            tally[r["unit"]][r["u"]] = r["c"]
+        for unit, d in tally.items():
+            top = max(d.values())
+            tied = sorted(u for u, c in d.items() if c == top)
+            if len(tied) > 1:
+                out[unit] = [_pub(users.get(u)) for u in tied]
+    return out
+
+
 def areas(conn: sqlite3.Connection, level: str) -> list[dict]:
     """Aree con geometria per un livello del LOD: 'comune' (da territories +
     territory_ownership) o 'province'/'region'/'country' (da admin_units +
     aggregate_ownership). Ritorna Feature-like con geometria GeoJSON."""
     users = _names(conn)
+    contenders = _contenders(conn, level)
     if level == "comune":
         rows = conn.execute(
             """SELECT t.osm_id, t.name, t.centroid_lat clat, t.centroid_lon clon,
@@ -102,6 +135,7 @@ def areas(conn: sqlite3.Connection, level: str) -> list[dict]:
             "owner_flag": f"/media/flag/{r['uid']}" if owner and owner["flag_ref"] else None,
             "is_contested": bool(r["c"]),
             "count": r["cnt"] or 0,
+            "contenders": contenders.get(r["osm_id"]) if r["c"] else None,
         })
     return out
 
@@ -130,20 +164,39 @@ def leaderboard(conn: sqlite3.Connection) -> dict:
 
 
 def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
+    """Cronologia dei flip con attaccante e attaccato. Scorre tutti i flip in
+    ordine per ricostruire l'ultimo owner reale (chi viene spodestato), poi
+    ritorna i più recenti. Frasi costruite lato client (i18n)."""
     names = {r["id"]: r["name"] for r in conn.execute(
         "SELECT id, COALESCE(public_name, display_name) AS name FROM users")}
-    out = []
-    for f in conn.execute(
-        """SELECT f.ts, f.prev_owner_user_id AS p, f.new_owner_user_id AS nw, t.name AS tn
-           FROM flips f JOIN territories t ON t.osm_id=f.territory_osm_id
-           ORDER BY f.ts DESC, f.id DESC LIMIT ?""", (limit,)
-    ):
-        nw = names.get(f["nw"]) if f["nw"] else None
-        p = names.get(f["p"]) if f["p"] else None
-        kind = "contested" if nw is None else ("conquer" if p is None else "steal")
-        # frase costruita lato client (i18n): forniamo i pezzi
-        out.append({"ts": f["ts"], "kind": kind, "actor": nw, "territory": f["tn"], "prev": p})
-    return out
+    rows = conn.execute(
+        """SELECT f.ts, f.territory_osm_id AS t, f.prev_owner_user_id AS p,
+                  f.new_owner_user_id AS nw, d.user_id AS by_user, tt.name AS tn
+           FROM flips f
+           JOIN territories tt ON tt.osm_id = f.territory_osm_id
+           LEFT JOIN deposits d ON d.id = f.deposit_id
+           ORDER BY f.ts, f.id"""
+    ).fetchall()
+
+    last_real: dict[int, int] = {}   # territorio → ultimo owner reale
+    items = []
+    for r in rows:
+        t, nw = r["t"], r["nw"]
+        if nw is None:
+            # pareggio: attaccante = autore del deposito, difensore = chi possedeva
+            items.append({"ts": r["ts"], "kind": "contested", "territory": r["tn"],
+                          "by": names.get(r["by_user"]), "defender": names.get(r["p"])})
+        else:
+            displaced = last_real.get(t)
+            if displaced == nw:
+                displaced = None            # riconquista dopo pareggio, non un furto
+            kind = "steal" if displaced else "conquer"
+            items.append({"ts": r["ts"], "kind": kind, "territory": r["tn"],
+                          "actor": names.get(nw), "displaced": names.get(displaced) if displaced else None})
+            last_real[t] = nw
+
+    items.reverse()   # più recenti prima
+    return items[:limit]
 
 
 def my_stats(conn: sqlite3.Connection, uid: int) -> dict | None:

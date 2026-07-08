@@ -59,7 +59,8 @@ async function loadAreas(force) {
       { type: "Feature", geometry: f.geometry, properties: f },
       { style: { color: "#fff", weight: 1, fillColor: ownerColor(f), fillOpacity: f.owner_id ? 0.55 : 0.25 } }
     );
-    const owner = f.is_contested ? `<i>${T.contested}</i>`
+    const owner = f.is_contested
+      ? `<i>${T.contested}${f.contenders && f.contenders.length ? ": " + f.contenders.map(esc).join(" vs ") : ""}</i>`
       : (f.owner_name ? `<b>${esc(f.owner_name)}</b>` : T.nobody);
     const link = level === "comune"
       ? `<br><a href="#" onclick="showTerritory(${f.osm_id});return false;">${T.details}</a>` : "";
@@ -141,9 +142,13 @@ document.querySelectorAll(".tabs button").forEach((b) => {
 });
 
 function feedText(f) {
-  if (f.kind === "contested") return `${esc(f.territory)} ${T.feed_contested}`;
-  if (f.kind === "conquer") return `${esc(f.actor)} ${T.feed_conquered} ${esc(f.territory)}`;
-  return `${esc(f.actor)} ${T.feed_stole} ${esc(f.territory)} ${T.feed_from} ${esc(f.prev)}`;
+  if (f.kind === "contested")
+    return f.defender
+      ? `${esc(f.by)} ${T.feed_tied} ${esc(f.defender)} @ ${esc(f.territory)}`
+      : `${esc(f.territory)} ${T.feed_contested}`;
+  if (f.kind === "steal")
+    return `${esc(f.actor)} ${T.feed_stole} ${esc(f.territory)} ${T.feed_from} ${esc(f.displaced)}`;
+  return `${esc(f.actor)} ${T.feed_conquered} ${esc(f.territory)}`;
 }
 
 async function loadPanels() {

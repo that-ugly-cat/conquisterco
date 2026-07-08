@@ -52,6 +52,7 @@ TRANSLATIONS = {
         "feed_conquered": "ha conquistato",
         "feed_stole": "ha strappato",
         "feed_from": "a",
+        "feed_tied": "ha pareggiato con",
         "feed_contested": "è diventato conteso",
         # profilo modale (di un giocatore)
         "pm_board": "Bacheca",
@@ -189,6 +190,7 @@ TRANSLATIONS = {
         "feed_conquered": "conquered",
         "feed_stole": "stole",
         "feed_from": "from",
+        "feed_tied": "tied",
         "feed_contested": "became contested",
         "pm_board": "Trophy case",
         "pm_territories": "Towns",
