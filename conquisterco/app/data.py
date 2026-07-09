@@ -191,6 +191,7 @@ def dumps_geo(conn: sqlite3.Connection) -> list[dict]:
             "ts": r["ts"], "lat": r["lat"], "lon": r["lon"],
             "altitude": r["altitude"],
             "has_photo": r["photo_ref"] is not None,  # False → placeholder coniglio
+            "is_video": _is_video(r["photo_ref"]),
         })
     return out
 

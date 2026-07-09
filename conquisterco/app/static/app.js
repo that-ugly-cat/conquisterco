@@ -11,7 +11,16 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 const areaLayer = L.layerGroup().addTo(map);
 const flagLayer = L.layerGroup().addTo(map);
-const dumpLayer = L.layerGroup();
+// Cluster dei dump: i pin densi/sovrapposti si aggregano e fanno "fan out"
+// (spiderfy) al passaggio del mouse. maxClusterRadius piccolo → si aggregano
+// solo quelli davvero vicini, gli altri restano pin singoli come prima.
+const dumpLayer = L.markerClusterGroup({
+  maxClusterRadius: 26,
+  showCoverageOnHover: false,
+  spiderfyOnMaxZoom: true,
+  disableClusteringAtZoom: 19,
+});
+dumpLayer.on("clustermouseover", (e) => e.layer.spiderfy());
 let dumpMarkers = {};   // deposit_id → marker (per il deep-link ?dump=<id>)
 let mode = "territori";
 
@@ -108,10 +117,12 @@ async function loadDumps() {
       icon: L.divIcon({ className: "dump-pin", html: "💩", iconSize: [20, 20] }),
     });
     dumpMarkers[d.id] = m;
-    const selfie = d.has_photo
-      ? `<img class="selfie-img" src="/api/selfie/${d.id}" alt="selfie"
-             onerror="this.outerHTML='&lt;div class=&quot;selfie&quot;&gt;🐰&lt;/div&gt;'">`
-      : `<div class="selfie" title="${T.no_selfie_short}">🐰</div>`;
+    const selfie = !d.has_photo
+      ? `<div class="selfie" title="${T.no_selfie_short}">🐰</div>`
+      : d.is_video
+        ? `<video class="selfie-img" src="/api/selfie/${d.id}#t=0.1" preload="metadata" controls muted playsinline></video>`
+        : `<img class="selfie-img" src="/api/selfie/${d.id}" alt="selfie"
+               onerror="this.outerHTML='&lt;div class=&quot;selfie&quot;&gt;🐰&lt;/div&gt;'">`;
     const alt = d.altitude != null ? `${Math.round(d.altitude)} m` : "?";
     m.bindPopup(`${selfie}<div style="margin-top:.4rem"><b>${esc(d.user_name)}</b><br>`
       + `${esc(d.ts)}<br>${T.altitude} ${alt}</div>`, { maxWidth: 220 });
@@ -276,7 +287,8 @@ function focusDump(id) {
   if (!m) return;
   setMode("dump");
   map.setView(m.getLatLng(), 16);
-  m.openPopup();
+  // il marker può essere dentro un cluster: lo si rende visibile, poi popup
+  dumpLayer.zoomToShowLayer(m, () => m.openPopup());
 }
 
 // ---- Boot ----------------------------------------------------------------
