@@ -21,6 +21,22 @@
   </header>
 
   <div class="admin-wrap">
+    <h2>{{ T.adm_bc_title }}</h2>
+    <p class="muted">{{ T.adm_bc_hint }}</p>
+    {% if sent == 'ok' %}<p class="bc-ok">{{ T.adm_bc_sent }}</p>
+    {% elif sent == 'fail' %}<p class="bc-err">{{ T.adm_bc_fail }}</p>
+    {% elif sent == 'off' %}<p class="bc-err">{{ T.adm_bc_off }}</p>
+    {% elif sent == 'empty' %}<p class="bc-err">{{ T.adm_bc_empty }}</p>{% endif %}
+    {% if bot_ok %}
+    <form method="post" action="/admin/broadcast" class="admin-bc"
+          onsubmit="return confirm('{{ T.adm_bc_confirm }}')">
+      <textarea name="message" rows="3" placeholder="{{ T.adm_bc_ph }}" required></textarea>
+      <button>{{ T.adm_bc_btn }}</button>
+    </form>
+    {% else %}
+    <p class="bc-err">{{ T.adm_bc_off }}</p>
+    {% endif %}
+
     <h2>{{ T.adm_users }}</h2>
     <table class="admin-table">
       <tr><th>{{ T.th_player }}</th><th>{{ T.adm_public }}</th><th>{{ T.adm_telegram }}</th><th>{{ T.adm_role }}</th><th>{{ T.adm_deposits }}</th><th>{{ T.adm_password }}</th><th>{{ T.adm_actions }}</th></tr>

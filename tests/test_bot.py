@@ -146,6 +146,32 @@ def test_badge_message_segreto_vs_pubblico():
     assert "🇮🇹" in sec and "🇬🇧" in sec
 
 
+def test_broadcast_disabilitato_se_bot_non_configurato(monkeypatch):
+    monkeypatch.setattr(bot, "BOT_TOKEN", "")
+    monkeypatch.setattr(bot, "ALLOWED_CHAT", None)
+    assert bot.bot_enabled() is False
+    assert bot.broadcast("ciao") is False   # nessuna rete, ritorna subito
+
+
+def test_broadcast_invia_al_gruppo(monkeypatch):
+    monkeypatch.setattr(bot, "BOT_TOKEN", "T")
+    monkeypatch.setattr(bot, "ALLOWED_CHAT", "42")
+
+    class C:
+        def __init__(self):
+            self.calls = []
+
+        def _api(self, method, params):
+            self.calls.append((method, params))
+            return {"ok": True}
+
+    c = C()
+    assert bot.broadcast("ciao a tutti", client=c) is True
+    assert c.calls[0][0] == "sendMessage"
+    assert c.calls[0][1]["chat_id"] == "42"
+    assert c.calls[0][1]["text"] == "ciao a tutti"
+
+
 def test_pareggio_a_tre_elenca_tutti(tmp_path):
     conn = fresh_db(":memory:")
     R = FakeResolver()

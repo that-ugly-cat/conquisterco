@@ -104,6 +104,21 @@ class TelegramClient:
         return self._api("setWebhook", {"url": url})
 
 
+def bot_enabled() -> bool:
+    """True se il bot è configurato (token + chat del gruppo)."""
+    return bool(BOT_TOKEN and ALLOWED_CHAT)
+
+
+def broadcast(text: str, client: "TelegramClient | None" = None) -> bool:
+    """Manda un messaggio libero al gruppo (usato dal pannello admin). False se il
+    bot non è configurato o se l'invio fallisce."""
+    if not bot_enabled():
+        return False
+    res = (client or TelegramClient())._api(
+        "sendMessage", {"chat_id": ALLOWED_CHAT, "text": text})
+    return bool(res.get("ok"))
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

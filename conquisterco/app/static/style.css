@@ -31,6 +31,11 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .admin-actions input,.admin-create input,.admin-create select{padding:.3rem .5rem;border:1px solid var(--line);border-radius:5px}
 .admin-actions button,.admin-create button{padding:.3rem .6rem;border:0;border-radius:5px;background:var(--accent);color:#fff;cursor:pointer}
 .admin-create{display:flex;gap:.5rem;flex-wrap:wrap;background:var(--paper);padding:.8rem;border:1px solid var(--line);border-radius:8px}
+.admin-bc{display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-start;background:var(--paper);padding:.8rem;border:1px solid var(--line);border-radius:8px}
+.admin-bc textarea{flex:1;min-width:240px;padding:.4rem .5rem;border:1px solid var(--line);border-radius:5px;font:inherit;resize:vertical}
+.admin-bc button{padding:.4rem .7rem;border:0;border-radius:5px;background:var(--accent);color:#fff;cursor:pointer}
+.bc-ok{color:#2e7d32;font-weight:600}
+.bc-err{color:#c0392b;font-weight:600}
 
 .prof-wrap{max-width:900px;margin:1.2rem auto;padding:0 1rem}
 .prof-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
