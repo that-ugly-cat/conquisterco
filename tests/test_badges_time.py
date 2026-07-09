@@ -39,14 +39,30 @@ def test_natale_e_bisesto(conn, geo):
 
 
 def test_capodanno_e_ultima_chiamata(conn, geo):
+    from datetime import date
+
     from conquisterco.ingest import add_user
     a = add_user(conn, "A")
-    dep(conn, a, 1012, "2025-03-01 10:00:00")   # prima del 2025
-    dep(conn, a, 1012, "2025-11-30 10:00:00")   # ultima del 2025
-    dep(conn, a, 1012, "2026-01-15 10:00:00")   # prima del 2026
+    ly, ty = date.today().year - 1, date.today().year   # anno concluso / in corso
+    dep(conn, a, 1012, f"{ly}-03-01 10:00:00")   # prima del ly
+    dep(conn, a, 1012, f"{ly}-11-30 10:00:00")   # ultima del ly (anno concluso)
+    dep(conn, a, 1012, f"{ty}-01-15 10:00:00")   # prima dell'anno in corso
     c = _codes(conn, geo)[a]
-    assert "capodanno" in c
-    assert "ultima_chiamata" in c
+    assert "capodanno" in c              # anche per l'anno in corso
+    assert "ultima_chiamata" in c        # solo per l'anno concluso
+
+
+def test_ultima_chiamata_non_scatta_per_anno_in_corso(conn, geo):
+    """Regressione: nell'anno in corso 'l'ultima cacata' cambia a ogni dump, quindi
+    NON deve assegnare il badge (altrimenti lo si ri-prende in continuazione)."""
+    from datetime import date
+
+    from conquisterco.ingest import add_user
+    a = add_user(conn, "A")
+    ty = date.today().year
+    dep(conn, a, 1012, f"{ty}-01-05 10:00:00")
+    dep(conn, a, 1012, f"{ty}-02-05 10:00:00")   # ultima "finora" dell'anno in corso
+    assert "ultima_chiamata" not in _codes(conn, geo).get(a, set())
 
 
 def test_streak_e_selfie(conn, geo):

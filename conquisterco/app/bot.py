@@ -383,7 +383,7 @@ def _recap_message(recap: dict) -> str | None:
     dumpers, slackers = recap["dumpers"], recap["slackers"]
     if not dumpers and not slackers:
         return None   # niente da dire
-    lines = ["🇮🇹 📅 Recap della settimana — il catasto fecale tira le somme.",
+    lines = ["🇮🇹 📅 Recap della settimana — il cacasto fecale tira le somme.",
              "🇬🇧 📅 Weekly recap — the fecal cadastre tallies up.", ""]
     if dumpers:
         lines += [f"{i}. {name} — {n} 💩" for i, (name, n) in enumerate(dumpers, 1)]

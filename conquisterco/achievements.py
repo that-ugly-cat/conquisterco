@@ -419,11 +419,15 @@ def _capodanno(ctx: EvalContext) -> list[Award]:
 
 @achievement("ultima_chiamata", "Ultima Chiamata", "Ultima cacata dell'anno.", icon="⏳")
 def _ultima_chiamata(ctx: EvalContext) -> list[Award]:
+    # SOLO anni CONCLUSI: nell'anno in corso "l'ultima finora" cambia a ogni dump
+    # (te la ri-prenderesti in continuazione). Si assegna a fine anno, a ritroso.
+    this_year = date.today().year
     out = []
     for uid, deps in ctx.deposits_by_user.items():
         last: dict[int, dict] = {}
         for d in deps:
-            last[d["dt"].year] = d   # ordinati asc → resta l'ultimo dell'anno
+            if d["dt"].year < this_year:
+                last[d["dt"].year] = d   # ordinati asc → resta l'ultimo dell'anno
         for y, d in last.items():
             out.append(Award("ultima_chiamata", uid, d["ts"], str(y)))
     return out
