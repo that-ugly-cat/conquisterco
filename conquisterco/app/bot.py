@@ -231,10 +231,10 @@ _FLIP_STEAL = [
 _FLIP_TIE = [
     ("🤝 {x} pareggia i conti con {z} a {c}. Nessuno comanda. Che squallore.",
      "🤝 {x} ties {z} in {c}. Nobody's in charge. How bleak."),
-    ("⚖️ Stallo a {c}: {x} e {z} appaiati. La giustizia è cieca, e tappata il naso.",
+    ("⚖️ Stallo a {c}: {x} e {z} appaiati. La giustizia è cieca, e si tappa il naso.",
      "⚖️ Deadlock in {c}: {x} and {z} tied. Justice is blind, and holding its nose."),
-    ("🌗 {x} riporta {c} nel limbo dei contesi, spalla a spalla con {z}.",
-     "🌗 {x} drags {c} back into contested limbo, shoulder to shoulder with {z}."),
+    ("🌗 {x} riporta {c} nel limbo dei territori contesi, spalla a spalla con {z}.",
+     "🌗 {x} drags {c} back into contested territories limbo, shoulder to shoulder with {z}."),
 ]
 
 # --- BADGE ({x} utente, {b} nome badge tradotto)
@@ -294,6 +294,30 @@ def _record_message(user: str, key: str, prev: str | None) -> str:
     return f"🇮🇹 {it.format(**kw_it)}\n🇬🇧 {en.format(**kw_en)}"
 
 
+# --- PAREGGIO a N ({c} comune, {who} elenco di TUTTI i contendenti)
+_TIE_N = [
+    ("🤝 {c} sprofonda nel pareggio: {who}. Nessuno comanda, tutti perdono.",
+     "🤝 {c} sinks into a tie: {who}. Nobody rules, everybody loses."),
+    ("⚖️ Stallo a {c}: {who} appaiati. La targa resta in cantina.",
+     "⚖️ Deadlock in {c}: {who} tied. The plaque stays in the basement."),
+    ("🌀 {c} è terra di nessuno: {who} a pari merito. Che disastro condiviso.",
+     "🌀 {c} is no man's land: {who} neck and neck. A shared disaster."),
+]
+
+
+def _join_names(items: list, conj: str) -> str:
+    if len(items) <= 1:
+        return items[0] if items else "?"
+    return ", ".join(items[:-1]) + f" {conj} " + items[-1]
+
+
+def _tie_message(comune: str, contenders: list) -> str:
+    it, en = random.choice(_TIE_N)
+    who_it = _join_names(contenders, "e")
+    who_en = _join_names(contenders, "and")
+    return f"🇮🇹 {it.format(c=comune, who=who_it)}\n🇬🇧 {en.format(c=comune, who=who_en)}"
+
+
 # ---------------------------------------------------------------------------
 # Handler
 # ---------------------------------------------------------------------------
@@ -329,9 +353,10 @@ def _handle_location(conn, msg: dict, client, resolver, media_dir) -> None:
     frm, loc = msg["from"], msg["location"]
     uid = resolve_sender(conn, frm)
     ts = _msg_ts(msg)
-    # stato PRIMA del dump, per rilevare badge e record nuovi
+    # stato PRIMA del dump, per rilevare badge, record e pareggi nuovi/cresciuti
     rec_before = data.record_holders(conn)
     awards_before = data.award_events(conn)
+    contested_before = data.contested_contenders(conn)
 
     did = add_deposit(conn, user_id=uid, ts=ts, lat=loc["latitude"], lon=loc["longitude"],
                       source="telegram", raw_ref=f"tg:{msg.get('message_id')}")
@@ -354,20 +379,32 @@ def _handle_location(conn, msg: dict, client, resolver, media_dir) -> None:
 
     chat_id = msg["chat"]["id"]
     client.send_message(chat_id, _confirm_message(_comune_of(conn, did)))
-    _announce_events(conn, client, chat_id, uid, did, rec_before, awards_before)
+    _announce_events(conn, client, chat_id, uid, did, rec_before, awards_before, contested_before)
 
 
-def _announce_events(conn, client, chat_id, uid, did, rec_before, awards_before) -> None:
-    """Annuncia, distinti e con i nomi: flip (conquista/furto/pareggio), badge
-    nuovi e record superati causati da questo dump."""
+def _announce_events(conn, client, chat_id, uid, did, rec_before, awards_before, contested_before) -> None:
+    """Annuncia, distinti e con i nomi: flip (conquista/furto/pareggio anche a
+    3+), badge nuovi e record superati causati da questo dump."""
     names = {r["id"]: r["name"] for r in conn.execute(
         "SELECT id, COALESCE(public_name, display_name) AS name FROM users")}
     uname = names.get(uid, "?")
 
-    # 1) flip sul comune del dump
-    line = data.feed_line_for_deposit(conn, did)
-    if line and (m := _flip_message(line)):
-        client.send_message(chat_id, m)
+    # 1) evento sul comune del dump. Se ora è conteso, elenca TUTTI i contendenti
+    #    (gestisce il pareggio a 2 e la crescita a 3+); altrimenti conquista/furto.
+    row = conn.execute("SELECT territory_osm_id t FROM deposits WHERE id=?", (did,)).fetchone()
+    comune_osm = row["t"] if row else None
+    if comune_osm is not None:
+        o = conn.execute("SELECT is_contested FROM territory_ownership WHERE territory_osm_id=?",
+                         (comune_osm,)).fetchone()
+        if o and o["is_contested"]:
+            after = data.contested_contenders(conn).get(comune_osm, ())
+            if after and after != contested_before.get(comune_osm, ()):   # nuovo o cresciuto
+                who = [names.get(u, "?") for u in after]
+                client.send_message(chat_id, _tie_message(_comune_of(conn, did) or "?", who))
+        else:
+            line = data.feed_line_for_deposit(conn, did)
+            if line and line["kind"] in ("conquer", "steal") and (m := _flip_message(line)):
+                client.send_message(chat_id, m)
 
     # 2) badge nuovi dell'autore
     for code, u, _ts, _ctx in sorted(data.award_events(conn) - awards_before):

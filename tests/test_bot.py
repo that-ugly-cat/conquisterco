@@ -135,6 +135,25 @@ def test_annuncio_flip_badge_record(tmp_path):
     assert "🇮🇹" in joined and "🇬🇧" in joined
 
 
+def test_pareggio_a_tre_elenca_tutti(tmp_path):
+    conn = fresh_db(":memory:")
+    R = FakeResolver()
+
+    def dump(fid, name, date):
+        u = {"message": {"message_id": fid, "date": date, "chat": {"id": 1},
+                         "from": {"id": fid, "first_name": name},
+                         "location": {"latitude": 45.1, "longitude": 11.1}}}
+        tg = FakeTG()
+        bot.process_update(conn, u, client=tg, resolver=R, media_dir=tmp_path)
+        return " ".join(t for _, t in tg.sent)
+
+    dump(1, "Alice", 1000)          # Alice conquista il comune
+    m2 = dump(2, "Bob", 2000)       # pareggio Alice–Bob
+    m3 = dump(3, "Carol", 3000)     # pareggio a tre
+    assert "Alice" in m2 and "Bob" in m2
+    assert "Alice" in m3 and "Bob" in m3 and "Carol" in m3   # elenca TUTTI e tre
+
+
 def test_start_onboarding(tmp_path):
     conn = fresh_db(":memory:")
     tg = FakeTG()

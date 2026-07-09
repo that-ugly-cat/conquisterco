@@ -248,6 +248,20 @@ def award_events(conn: sqlite3.Connection) -> set:
                    FROM awards w JOIN achievements a ON a.id = w.achievement_id""")}
 
 
+def contested_contenders(conn: sqlite3.Connection) -> dict[int, tuple]:
+    """Per ogni COMUNE conteso, gli id (ordinati) di tutti i giocatori in parità
+    in testa. Serve al bot per annunciare i pareggi anche a 3+ (e rilevarne la
+    crescita nel tempo)."""
+    out: dict[int, list] = defaultdict(list)
+    for r in conn.execute(
+        """SELECT s.territory_osm_id t, s.user_id u FROM standings s
+           JOIN territory_ownership o ON o.territory_osm_id = s.territory_osm_id
+           WHERE o.is_contested = 1 AND s.deposit_count = o.top_count ORDER BY s.user_id"""
+    ):
+        out[r["t"]].append(r["u"])
+    return {k: tuple(v) for k, v in out.items()}
+
+
 def feed_line_for_deposit(conn: sqlite3.Connection, deposit_id: int) -> dict | None:
     """Evento del feed causato da un deposito (per l'annuncio del bot), o None."""
     f = conn.execute(
