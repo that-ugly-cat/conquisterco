@@ -225,19 +225,22 @@ Contesto: amici, fiducia di base. Niente sistemi polizieschi.
 Allineato all'ecosistema (borant VPS, come RoomPulse):
 
 - **Backend:** Python / **FastAPI**.
-- **Storage:** **SQLite** (eventuale SpatiaLite per la geometria).
-- **Geo:** `shapely` per point-in-polygon offline; poligoni OSM; DEM per la quota.
-- **Frontend:** web dashboard, **Leaflet / MapLibre** per la coropletica.
+- **Storage:** **SQLite**.
+- **Geo:** **Nominatim** (reverse-geocoding: comune, gerarchia e geometria GeoJSON;
+  cachato in DB, egress una tantum — §7.1); quota da **open-meteo** (DEM); area km²
+  con formula sferica (niente shapely).
+- **Frontend:** web dashboard, **Leaflet** (renderer canvas) per la coropletica.
 - **Tooling:** `uv` (pyproject.toml + lock).
-- **Deploy:** borant, come gli altri tool.
+- **Deploy:** **Docker + Caddy** su borant; DB e selfie su volume `/data` fuori da git
+  (vedi `DEPLOY.md`).
 
 **Pipeline dati (idempotente, ri-eseguibile end-to-end):**
 
 ```
 raw (whatsapp / telegram / map)
   → parse            → Deposit normalizzato
-  → geo-enrich       → territory_osm_id (point-in-polygon) + altitude (DEM)
-  → recompute        → standings + ownership + flips
+  → geo-enrich       → territory_osm_id (reverse-geocode Nominatim) + altitude (DEM)
+  → recompute        → standings + ownership + flips + aggregati
   → evaluate         → awards (motore achievement)
 ```
 
@@ -250,12 +253,21 @@ Schema DB completo in [`schema.sql`](schema.sql).
 
 ---
 
-## 12. Roadmap indicativa
+## 12. Roadmap — tutte le fasi FATTE ✅
 
 1. **Fase 0 — Spec** ✅ (questo documento)
-2. **Fase 1 — Modello & motore:** schema DB, ingestion normalizzata, geo-enrich,
-   recompute standings/flips, evaluator achievement. Testabile con dati fittizi.
-3. **Fase 2 — Import storico:** parser export WhatsApp + pairing selfie.
-4. **Fase 3 — Dashboard:** mappa (territori + dump), leaderboard, profili, feed.
-5. **Fase 4 — Auth & admin:** login, ruoli, gestione utenti.
-6. **Fase 5 — Bot Telegram:** input di regime.
+2. **Fase 1 — Modello & motore** ✅ schema DB, ingestion normalizzata, geo-enrich,
+   recompute standings/ownership/flips + aggregati, evaluator achievement.
+3. **Fase 2 — Import storico** ✅ parser export WhatsApp + pairing selfie (`importers/`).
+4. **Fase 3 — Dashboard** ✅ mappa coropletica (LOD) + dump, leaderboard, record, feed,
+   profili, badge, galleria.
+5. **Fase 4 — Auth & admin** ✅ login per-utente, ruoli, gestione utenti + merge.
+6. **Fase 5 — Bot Telegram** ✅ webhook, account provvisori + deep-link, annunci sassy,
+   recap settimanale.
+
+**Oltre le fasi:** geocoding reale via Nominatim + cache (non self-host) con quota da
+open-meteo (§7.1); i18n IT/EN; deploy Docker + Caddy (`DEPLOY.md`); dati veri su volume
+fuori da git.
+
+**Aperti / idee:** badge a livello aggregato (§6, "Governatore/Anschluss…"); geocoder
+offline opzionale; rifinitura km² per unità estere sovradimensionate.
