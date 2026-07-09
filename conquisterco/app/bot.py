@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import sqlite3
 import urllib.parse
 import urllib.request
@@ -183,6 +184,41 @@ def _bilingual_feed(item: dict) -> str:
             f'🇬🇧 {_feed_sentence(item, TRANSLATIONS["en"])}')
 
 
+# Conferme del dump, voce "System" (à la Dungeon Crawler Carl): sardonica,
+# teatrale, mock-corporate. Pescate a caso, bilingui. {c} = comune.
+_CONFIRMS = [
+    ("🏴 {c} è caduta. Il tuo intestino non fa prigionieri.",
+     "🏴 {c} has fallen. Your bowels take no prisoners."),
+    ("🗂️ Pratica evasa a {c}. Timbrata, protocollata, puzzolente.",
+     "🗂️ Paperwork cleared in {c}. Stamped, filed, fragrant."),
+    ("📺 Deposito a {c} offerto da: la tua dieta discutibile.",
+     "📺 Deposit in {c} brought to you by: your questionable diet."),
+    ("🕯️ Qualcosa è stato lasciato a {c}. Non tornerà a prenderlo nessuno.",
+     "🕯️ Something was left in {c}. No one is coming back for it."),
+    ("🎉 Complimenti! Hai reso {c} leggermente peggiore.",
+     "🎉 Congratulations! You've made {c} slightly worse."),
+    ("👀 Il pubblico trattiene il fiato... e per ottime ragioni. Registrato a {c}.",
+     "👀 The audience holds its breath... for excellent reasons. Logged in {c}."),
+    ("🔬 Campione biologico depositato a {c}. Rigore metodologico impeccabile.",
+     "🔬 Biological sample deposited in {c}. Impeccable methodology."),
+    ("🚩 Vessillo (fecale) issato su {c}. Che i posteri giudichino.",
+     "🚩 A (fecal) banner raised over {c}. Let posterity judge."),
+    ("😐 Registrato: {c}. Sì. È successo davvero. Andiamo avanti.",
+     "😐 Logged: {c}. Yes. It really happened. Let's move on."),
+    ("📜 Le leggende parleranno di ciò che hai fatto a {c}. Sottovoce.",
+     "📜 Legends will speak of what you did in {c}. In hushed tones."),
+]
+
+_CONFIRM_UNKNOWN = (
+    "🌀 Deposito registrato... da qualche parte. Nemmeno la mappa sa dove hai osato.",
+    "🌀 Deposit logged... somewhere. Even the map doesn't know where you dared.")
+
+
+def _confirm_message(comune: str | None) -> str:
+    it, en = _CONFIRM_UNKNOWN if not comune else random.choice(_CONFIRMS)
+    return f"🇮🇹 {it.format(c=comune)}\n🇬🇧 {en.format(c=comune)}"
+
+
 # ---------------------------------------------------------------------------
 # Handler
 # ---------------------------------------------------------------------------
@@ -236,7 +272,7 @@ def _handle_location(conn, msg: dict, client, resolver, media_dir) -> None:
     enrich_deposits_osm(conn, resolver)
     _elevate(conn)            # quota da DEM (open-meteo)
     finalize(conn)
-    client.send_message(msg["chat"]["id"], f"💩 registrato: {_comune_of(conn, did) or '??'}")
+    client.send_message(msg["chat"]["id"], _confirm_message(_comune_of(conn, did)))
     # se il dump ha causato un evento (conquista/furto/pareggio), annuncialo bilingue
     line = data.feed_line_for_deposit(conn, did)
     if line:

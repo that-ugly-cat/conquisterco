@@ -116,6 +116,14 @@ def test_no_selfie_scarta_la_foto(tmp_path):
     assert conn.execute("SELECT COUNT(*) FROM tg_pending_photo").fetchone()[0] == 0
 
 
+def test_confirm_message_bilingue():
+    for _ in range(15):  # copre le varianti pescate a caso
+        m = bot._confirm_message("Trento")
+        assert "🇮🇹" in m and "🇬🇧" in m and "Trento" in m
+    unk = bot._confirm_message(None)
+    assert "🇮🇹" in unk and "🇬🇧" in unk
+
+
 def test_annuncio_feed_bilingue(tmp_path):
     conn = fresh_db(":memory:")
     tg = FakeTG()
