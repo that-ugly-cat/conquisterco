@@ -35,6 +35,7 @@ TRANSLATIONS = {
         # tabella classifica
         "th_num": "#",
         "th_player": "Giocatore",
+        "th_score": "punti",
         "th_comuni": "comuni",
         "th_km2": "km²",
         # popup territorio / dump
@@ -242,6 +243,7 @@ TRANSLATIONS = {
         "tab_badges": "Badges",
         "th_num": "#",
         "th_player": "Player",
+        "th_score": "score",
         "th_comuni": "towns",
         "th_km2": "km²",
         "owner": "owner",

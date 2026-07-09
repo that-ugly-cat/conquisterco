@@ -81,6 +81,39 @@ def test_badge_holders_e_descrizione_profilo(conn, geo):
     assert byc["colonizzatore"]["description"] == "testo come-si-prende"
 
 
+def test_punteggio_ordina_la_classifica(conn, geo):
+    from conquisterco.ingest import add_user
+    from conquisterco.leaderboards import main_leaderboard
+    a = add_user(conn, "A")
+    b = add_user(conn, "B")
+    dep(conn, a, 1012, "2026-04-01 10:00:00")   # Roma
+    dep(conn, b, 1003, "2026-04-01 10:00:00")   # Milano
+    run_all(conn, geo)
+    lb = main_leaderboard(conn)
+    assert all("score" in r for r in lb)
+    scores = [r["score"] for r in lb]
+    assert scores == sorted(scores, reverse=True)   # ordinata per punteggio desc
+
+
+def test_badge_ripetibili_una_volta_e_segreti_doppi(conn, geo):
+    from conquisterco import config
+    from conquisterco.ingest import add_user
+    from conquisterco.leaderboards import _badge_counts, _score
+    a = add_user(conn, "A")
+    dep(conn, a, 1012, "2025-01-01 10:00:00")   # colonizzatore + capodanno'25 + ultima'25
+    dep(conn, a, 1012, "2026-01-01 10:00:00")   # capodanno'26 + ultima'26 (ripetibili ×2)
+    b = add_user(conn, "B")
+    dep(conn, b, 1005, "2026-05-01 10:00:00")   # Venezia → serenissima (SEGRETO) + altri
+    run_all(conn, geo)
+
+    nb_a, sb_a = _badge_counts(conn)[a]
+    assert nb_a == 3 and sb_a == 0            # ripetibili contano una volta per tipo
+    nb_b, sb_b = _badge_counts(conn)[b]
+    assert sb_b >= 1                           # serenissima è segreto
+    # il segreto pesa doppio nella somma
+    assert _score(0, 0, (nb_b, sb_b)) == config.SCORE_PT_BADGE * (nb_b + config.SCORE_SECRET_MULT * sb_b)
+
+
 def test_segreti_nascosti_dalla_legenda_ma_assegnati(conn, geo):
     """Un badge segreto scatta e finisce negli award, ma NON compare nella
     legenda pubblica del modale."""

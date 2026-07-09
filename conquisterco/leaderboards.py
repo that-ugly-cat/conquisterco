@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from collections import defaultdict
 
+from . import config
 from .ownership import replay_flips
 from .util import haversine_km, parse_ts
 
@@ -15,8 +16,31 @@ def _names(conn: sqlite3.Connection) -> dict[int, str]:
         "SELECT id, COALESCE(public_name, display_name) AS name FROM users")}
 
 
+def _badge_counts(conn: sqlite3.Connection) -> dict[int, tuple[int, int]]:
+    """Per utente: (badge distinti normali, badge distinti segreti). DISTINCT →
+    i ripetibili contano una volta sola (Blitz ×6 = 1)."""
+    out: dict[int, tuple[int, int]] = {}
+    for r in conn.execute(
+        """SELECT w.user_id AS uid,
+                  COUNT(DISTINCT CASE WHEN a.secret = 0 THEN a.id END) AS normal,
+                  COUNT(DISTINCT CASE WHEN a.secret = 1 THEN a.id END) AS secret
+           FROM awards w JOIN achievements a ON a.id = w.achievement_id
+           GROUP BY w.user_id"""
+    ):
+        out[r["uid"]] = (r["normal"], r["secret"])
+    return out
+
+
+def _score(comuni: int, km2: float, badges: tuple[int, int]) -> float:
+    nb, sb = badges
+    return (config.SCORE_PT_COMUNE * comuni
+            + config.SCORE_PT_KM2 * km2
+            + config.SCORE_PT_BADGE * (nb + config.SCORE_SECRET_MULT * sb))
+
+
 def main_leaderboard(conn: sqlite3.Connection) -> list[dict]:
-    """Per utente: comuni posseduti e km² controllati. Ordinata per comuni, poi km²."""
+    """Per utente: comuni, km² e PUNTEGGIO (somma pesata, §config). Ordinata per
+    punteggio, poi comuni, poi km²."""
     names = _names(conn)
     comuni: dict[int, int] = defaultdict(int)
     km2: dict[int, float] = defaultdict(float)
@@ -28,11 +52,16 @@ def main_leaderboard(conn: sqlite3.Connection) -> list[dict]:
     ):
         comuni[r["uid"]] += 1
         km2[r["uid"]] += r["area"]
-    rows = [
-        {"user_id": u, "name": names.get(u, str(u)), "comuni": comuni[u], "km2": round(km2[u], 1)}
-        for u in comuni
-    ]
-    rows.sort(key=lambda x: (x["comuni"], x["km2"]), reverse=True)
+    badges = _badge_counts(conn)
+    rows = []
+    for u in set(comuni) | set(badges):   # anche chi ha solo badge e zero comuni
+        b = badges.get(u, (0, 0))
+        rows.append({
+            "user_id": u, "name": names.get(u, str(u)),
+            "comuni": comuni[u], "km2": round(km2[u], 1),
+            "score": round(_score(comuni[u], km2[u], b)),
+        })
+    rows.sort(key=lambda x: (x["score"], x["comuni"], x["km2"]), reverse=True)
     return rows
 
 

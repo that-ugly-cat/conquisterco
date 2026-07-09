@@ -48,6 +48,15 @@ TITICACA_RADIUS_KM = 80.0  # raggio entro cui scatta Titicacca
 # --- Finestra "viaggio" (sequenze internazionali) --------------------------
 TRIP_WINDOW_DAYS = 5       # Fuck Brexit / Barbarossa / Cortina di carta igienica
 
+# --- Punteggio (somma pesata, tutto ritarabile qui) ------------------------
+# score = PT_COMUNE·comuni + PT_KM2·km² + PT_BADGE·(badge distinti; i segreti ×MULT)
+# I badge contano UNA VOLTA per tipo (i ripetibili non gonfiano). km² scalato
+# così non schiaccia comuni e badge.
+SCORE_PT_COMUNE = 10.0     # punti per comune posseduto
+SCORE_PT_KM2 = 0.01        # punti per km² (→ 100 km² = 1 punto)
+SCORE_PT_BADGE = 20.0      # punti per badge distinto
+SCORE_SECRET_MULT = 2      # i badge segreti valgono doppio
+
 # --- Riferimenti geografici ------------------------------------------------
 ITALIAN_REGIONS = frozenset({
     "Valle d'Aosta", "Piemonte", "Lombardia", "Trentino-Alto Adige", "Veneto",
