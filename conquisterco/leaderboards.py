@@ -53,8 +53,11 @@ def main_leaderboard(conn: sqlite3.Connection) -> list[dict]:
         comuni[r["uid"]] += 1
         km2[r["uid"]] += r["area"]
     badges = _badge_counts(conn)
+    depositors = {r["uid"] for r in conn.execute("SELECT DISTINCT user_id AS uid FROM deposits")}
     rows = []
-    for u in set(comuni) | set(badges):   # anche chi ha solo badge e zero comuni
+    # chiunque abbia giocato compare: ha cagato almeno una volta, possiede un
+    # comune, o ha un badge (i gatti col badge del Sistema inclusi).
+    for u in set(comuni) | set(badges) | depositors:
         b = badges.get(u, (0, 0))
         rows.append({
             "user_id": u, "name": names.get(u, str(u)),

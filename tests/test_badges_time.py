@@ -101,6 +101,21 @@ def test_badge_holders_e_descrizione_profilo(conn, geo):
     assert byc["colonizzatore"]["description"] == "testo come-si-prende"
 
 
+def test_classifica_include_chi_ha_solo_giocato(conn, geo):
+    """Chi ha almeno una cacata compare in classifica, anche con 0 comuni e 0 badge
+    (così un utente-gatto non sparisce mai)."""
+    from conquisterco.ingest import add_user
+    from conquisterco.leaderboards import main_leaderboard
+    a = add_user(conn, "A")
+    tig = add_user(conn, "Tiglia")
+    dep(conn, a, 1012, "2025-01-01 09:00:00")   # A prima del gruppo
+    dep(conn, a, 1012, "2025-12-20 09:00:00")   # A ultima del gruppo → possiede Roma
+    dep(conn, tig, 1012, "2025-06-01 10:00:00")  # Tiglia: 1 cacata, non owner, niente badge
+    run_all(conn, geo)
+    row = next((r for r in main_leaderboard(conn) if r["name"] == "Tiglia"), None)
+    assert row is not None and row["comuni"] == 0 and row["score"] == 0
+
+
 def test_punteggio_ordina_la_classifica(conn, geo):
     from conquisterco.ingest import add_user
     from conquisterco.leaderboards import main_leaderboard
