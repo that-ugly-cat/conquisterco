@@ -182,7 +182,7 @@ TRANSLATIONS = {
         "ach_waterloo": "Waterloo", "ach_waterloo_d": "Depositi in almeno 3 comuni francesi distinti.",
         "ach_turno_notte": "Turno di Notte", "ach_turno_notte_d": "Cacata registrata tra mezzanotte e le 5.",
         "ach_alba_regno": "L'Alba del Nuovo Regno", "ach_alba_regno_d": "Cacata tra le 5 e le 7 del mattino.",
-        "ach_natale_fecale": "Natale di Fecale", "ach_natale_fecale_d": "Cacata il 25 dicembre.",
+        "ach_natale_fecale": "Natale Fecale", "ach_natale_fecale_d": "Cacata il 25 dicembre.",
         "ach_anno_bisesto": "Anno Bisesto, Cesso Onesto", "ach_anno_bisesto_d": "Cacca il 29 febbraio.",
         "ach_capodanno": "Capodanno Col Botto", "ach_capodanno_d": "Prima cacata dell'anno.",
         "ach_ultima_chiamata": "Ultima Chiamata", "ach_ultima_chiamata_d": "Ultima cacata dell'anno.",

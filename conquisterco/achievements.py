@@ -380,7 +380,7 @@ def _alba_regno(ctx: EvalContext) -> list[Award]:
     return out
 
 
-@achievement("natale_fecale", "Natale di Fecale", "Cacata il 25 dicembre.", icon="🎄")
+@achievement("natale_fecale", "Natale Fecale", "Cacata il 25 dicembre.", icon="🎄")
 def _natale(ctx: EvalContext) -> list[Award]:
     out = []
     for uid, deps in ctx.deposits_by_user.items():

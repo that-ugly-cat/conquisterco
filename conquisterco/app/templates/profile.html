@@ -59,7 +59,7 @@
         <p class="muted">{{ T.st_from }} {{ (s.primo or '')[:10] }} {{ T.st_to }} {{ (s.ultimo or '')[:10] }}</p>
         {% if s.records %}<p><b>{{ T.st_records_held }}</b> {% for k in s.records %}{{ T['rec_' + k] }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
         <h3>{{ T.tab_badges }} ({{ s.badges | length }}) <button class="link-btn" onclick="document.getElementById('legend').classList.remove('hidden')">{{ T.badges_what }}</button></h3>
-        <p>{% for b in s.badges %}{{ b.icon or '🏅' }} {{ b.name }}{% if b.count > 1 %} ×{{ b.count }}{% endif %}<br>{% else %}<i>{{ T.pm_no_badge }}</i>{% endfor %}</p>
+        <p>{% for b in s.badges %}<span class="player-link" onclick="showBadgeInfo('{{ b.code }}')">{{ b.icon or '🏅' }} {{ b.name }}{% if b.count > 1 %} ×{{ b.count }}{% endif %}</span><br>{% else %}<i>{{ T.pm_no_badge }}</i>{% endfor %}</p>
       </section>
 
       <!-- Identità -->
@@ -140,6 +140,28 @@
       {% endfor %}
     </div>
   </div>
+
+  <div id="binfo" class="modal hidden">
+    <div class="modal-box">
+      <span class="close" onclick="document.getElementById('binfo').classList.add('hidden')">×</span>
+      <h2 id="binfo-title"></h2>
+      <p class="muted" style="margin:.2rem 0 .5rem">{{ T.bi_howto }}</p>
+      <p id="binfo-desc"></p>
+    </div>
+  </div>
+  <script>
+    window.BINFO = {};
+    ({{ s.badges | tojson }}).forEach(function (b) { window.BINFO[b.code] = b; });
+    function showBadgeInfo(code) {
+      var b = window.BINFO[code]; if (!b) return;
+      document.getElementById("binfo-title").textContent = (b.icon || "🏅") + " " + b.name;
+      document.getElementById("binfo-desc").textContent = b.description || "";
+      document.getElementById("binfo").classList.remove("hidden");
+    }
+    document.getElementById("binfo").addEventListener("click", function (e) {
+      if (e.target.id === "binfo") this.classList.add("hidden");
+    });
+  </script>
 
   <div id="confirm" class="modal hidden">
     <div class="modal-box">

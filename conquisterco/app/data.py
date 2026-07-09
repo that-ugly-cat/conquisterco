@@ -318,12 +318,12 @@ def feed_line_for_deposit(conn: sqlite3.Connection, deposit_id: int) -> dict | N
             "actor": names.get(f["nw"]), "displaced": names.get(displaced) if displaced else None}
 
 
-def my_stats(conn: sqlite3.Connection, uid: int) -> dict | None:
+def my_stats(conn: sqlite3.Connection, uid: int, t: dict | None = None) -> dict | None:
     """Statistiche personali per la pagina profilo."""
     u = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
     if u is None:
         return None
-    prof = profile(conn, uid)  # comuni, km2, territories, badges
+    prof = profile(conn, uid, t)  # comuni, km2, territories, badges (code + descr tradotta)
 
     lb = main_leaderboard(conn)
     rank = next((i + 1 for i, r in enumerate(lb) if r["user_id"] == uid), None)

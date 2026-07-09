@@ -290,7 +290,7 @@ def _serve_profile_image(conn, uid: int, column: str):
 @app.get("/me", response_class=HTMLResponse)
 def me_page(request: Request, conn=Depends(get_db)):
     require_login(request)
-    stats = data.my_stats(conn, request.session["uid"])
+    stats = data.my_stats(conn, request.session["uid"], get_t(request))
     if stats is None:
         request.session.clear()
         return RedirectResponse("/", status_code=303)
