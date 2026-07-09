@@ -28,7 +28,7 @@ from ..enrich_osm import enrich_deposits_osm
 from ..ingest import add_deposit
 from ..pipeline import finalize
 from ..util import parse_ts
-from . import data
+from . import data, triggers
 from .translations import TRANSLATIONS
 
 # indirezione per iniettare l'enrich altitudine nei test (evita chiamate di rete)
@@ -66,6 +66,9 @@ ALLOWED_CHAT = os.environ.get("TELEGRAM_CHAT_ID")          # id del gruppo (str)
 BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "conquisterco_bot")
 PUBLIC_URL = os.environ.get("CONQUISTERCO_PUBLIC_URL", "")
 PAIR_WINDOW_S = 120   # finestra di accoppiamento pin↔foto (2 minuti)
+# Probabilità di rispondere quando un trigger testuale combacia (1.0 = sempre).
+# Abbassala se il bot diventa troppo chiacchierone.
+TRIGGER_CHANCE = float(os.environ.get("CONQUISTERCO_TRIGGER_CHANCE", "1.0"))
 
 
 # ---------------------------------------------------------------------------
@@ -559,3 +562,7 @@ def process_update(conn: sqlite3.Connection, update: dict, *, client, resolver, 
         _handle_location(conn, msg, client, resolver, media_dir)
     elif "photo" in msg:
         _handle_photo(conn, msg, client, media_dir)
+    elif text and not text.startswith("/") and not msg["from"].get("is_bot"):
+        reply = triggers.reply_for(text)
+        if reply and random.random() <= TRIGGER_CHANCE:
+            client.send_message(chat.get("id"), reply)
