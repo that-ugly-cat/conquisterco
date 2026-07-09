@@ -399,33 +399,25 @@ def _bisesto(ctx: EvalContext) -> list[Award]:
     return out
 
 
-@achievement("capodanno", "Capodanno Col Botto", "Prima cacata dell'anno.", icon="🎆")
+@achievement("capodanno", "Capodanno Col Botto", "La prima cacata dell'anno di tutto il gruppo.", icon="🎆")
 def _capodanno(ctx: EvalContext) -> list[Award]:
-    out = []
-    for uid, deps in ctx.deposits_by_user.items():
-        seen: set[int] = set()
-        for d in deps:  # ordinati asc → il primo di ogni anno
-            y = d["dt"].year
-            if y not in seen:
-                seen.add(y)
-                out.append(Award("capodanno", uid, d["ts"], str(y)))
-    return out
+    # superlativo di gruppo: UN solo detentore per anno = chi ha cagato per primo.
+    first: dict[int, dict] = {}
+    for d in ctx.deposits:  # ordinati per ts asc → il primo di ogni anno
+        first.setdefault(d["dt"].year, d)
+    return [Award("capodanno", d["user_id"], d["ts"], str(y)) for y, d in first.items()]
 
 
-@achievement("ultima_chiamata", "Ultima Chiamata", "Ultima cacata dell'anno.", icon="⏳")
+@achievement("ultima_chiamata", "Ultima Chiamata", "L'ultima cacata dell'anno di tutto il gruppo.", icon="⏳")
 def _ultima_chiamata(ctx: EvalContext) -> list[Award]:
-    # SOLO anni CONCLUSI: nell'anno in corso "l'ultima finora" cambia a ogni dump
-    # (te la ri-prenderesti in continuazione). Si assegna a fine anno, a ritroso.
+    # superlativo di gruppo, SOLO anni conclusi (nell'anno in corso "l'ultima
+    # finora" cambierebbe a ogni dump). UN detentore per anno.
     this_year = date.today().year
-    out = []
-    for uid, deps in ctx.deposits_by_user.items():
-        last: dict[int, dict] = {}
-        for d in deps:
-            if d["dt"].year < this_year:
-                last[d["dt"].year] = d   # ordinati asc → resta l'ultimo dell'anno
-        for y, d in last.items():
-            out.append(Award("ultima_chiamata", uid, d["ts"], str(y)))
-    return out
+    last: dict[int, dict] = {}
+    for d in ctx.deposits:  # ordinati asc → resta l'ultimo di ogni anno
+        if d["dt"].year < this_year:
+            last[d["dt"].year] = d
+    return [Award("ultima_chiamata", d["user_id"], d["ts"], str(y)) for y, d in last.items()]
 
 
 # ---------------------------------------------------------------------------

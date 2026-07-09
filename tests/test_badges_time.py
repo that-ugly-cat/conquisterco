@@ -38,18 +38,22 @@ def test_natale_e_bisesto(conn, geo):
     assert "natale_fecale" in c
 
 
-def test_capodanno_e_ultima_chiamata(conn, geo):
+def test_capodanno_e_ultima_di_gruppo(conn, geo):
+    """Superlativi di gruppo: la prima e l'ultima cacata dell'anno tra TUTTI gli
+    utenti — un solo detentore per anno, non uno per utente."""
     from datetime import date
 
     from conquisterco.ingest import add_user
     a = add_user(conn, "A")
-    ly, ty = date.today().year - 1, date.today().year   # anno concluso / in corso
-    dep(conn, a, 1012, f"{ly}-03-01 10:00:00")   # prima del ly
-    dep(conn, a, 1012, f"{ly}-11-30 10:00:00")   # ultima del ly (anno concluso)
-    dep(conn, a, 1012, f"{ty}-01-15 10:00:00")   # prima dell'anno in corso
-    c = _codes(conn, geo)[a]
-    assert "capodanno" in c              # anche per l'anno in corso
-    assert "ultima_chiamata" in c        # solo per l'anno concluso
+    b = add_user(conn, "B")
+    ly = date.today().year - 1                    # anno concluso
+    dep(conn, a, 1012, f"{ly}-01-05 10:00:00")    # A: prima del gruppo
+    dep(conn, b, 1003, f"{ly}-06-01 10:00:00")    # B: in mezzo (né primo né ultimo)
+    dep(conn, a, 1005, f"{ly}-12-20 10:00:00")    # A: ultima del gruppo
+    codes = _codes(conn, geo)
+    assert "capodanno" in codes[a] and "ultima_chiamata" in codes[a]
+    assert "capodanno" not in codes.get(b, set())         # B non è il primo del gruppo
+    assert "ultima_chiamata" not in codes.get(b, set())   # né l'ultimo
 
 
 def test_ultima_chiamata_non_scatta_per_anno_in_corso(conn, geo):
