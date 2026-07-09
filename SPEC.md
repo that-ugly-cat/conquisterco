@@ -54,12 +54,25 @@ tocchiamo lo storico: rigiriamo il motore.
 
 ## 4. Leaderboard principale — controllo territori
 
-Doppio valore, entrambi mostrati:
+Ordinata per **Punteggio**, con comuni e km² come colonne e tie-break:
 
-1. **N° comuni posseduti** (metrica canonica, leggibile)
-2. **km² controllati** (tie-break e board parallela)
+1. **Punteggio** (metrica canonica di sintesi)
+2. **N° comuni posseduti** (leggibile, primo tie-break)
+3. **km² controllati** (secondo tie-break)
 
-Popolazione esclusa.
+Popolazione esclusa. In classifica compare **chiunque abbia giocato** (≥1 deposito,
+possiede un comune, o ha un badge): un giocatore non sparisce solo perché non controlla
+territorio. Accanto al nome, la **bandiera** scelta dal giocatore.
+
+### 4.1 Punteggio (somma pesata)
+
+```
+score = PT_COMUNE·comuni + PT_KM2·km² + PT_BADGE·(badge distinti; i segreti ×MULT)
+```
+
+Tutti i coefficienti in `config.py` (default: comune 10 · 100 km² = 1 pt · badge 10 ·
+segreti ×2). I badge contano **una volta per tipo** (i ripetibili non gonfiano). km²
+scalato per non schiacciare comuni e badge. Interamente **derivato e ricalcolabile**.
 
 ---
 
@@ -145,6 +158,26 @@ prende). Documentati qui e basta — la sorpresa è il punto.
 | `neutralita_armata` | **Neutralità Armata** | CH dopo aver cacato in IT/DE/FR/AT |
 | `cortina_igienica` | **La Cortina di Carta Igienica** | ex-Ovest & ex-Est entro 5 giorni |
 | `incontro_teano` | **Incontro di Te-ano** | due giocatori stesso giorno stesso comune → conteso |
+
+### Badge manuali ("li assegna il Sistema")
+
+Alcuni riconoscimenti non derivano dai depositi: li **assegna a mano** l'admin. Poiché
+gli award vengono azzerati e riderivati a ogni `finalize`, la fonte di verità sta in
+una tabella persistente **`manual_awards`** (non toccata dal ricalcolo); una regola con
+`manual=True` la rilegge e la trasforma in award, così sopravvive ai ricalcoli.
+Assegnazione/revoca dal pannello admin ("Badge speciali"). Primo esemplare:
+`gatto_sul_cesso` — **Gatto sul Cesso**, "solo per gatti molto speciali" (una gatta del
+gruppo, colta sul cesso, ha un profilo a pieno titolo).
+
+### Note su alcuni badge
+
+- **`capodanno` / `ultima_chiamata`** sono **superlativi di gruppo**: la prima e
+  l'ultima cacata dell'anno *tra tutti* (un detentore per anno), non per-utente.
+  `ultima_chiamata` solo per anni conclusi (nell'anno in corso "l'ultima" si sposterebbe
+  a ogni dump).
+- **Badge-soglia** (`granduca_colon`, `colonialista_anale`, `imperialista_anale`,
+  `spartizione_polonia`) sono datati al **primo superamento** della soglia (il replay
+  registra il primo ts per conteggio): ts stabile → il bot non li riannuncia a ogni dump.
 
 ### Backlog badge — livelli amministrativi (futuri)
 
@@ -311,5 +344,15 @@ Schema DB completo in [`schema.sql`](schema.sql).
 open-meteo (§7.1); i18n IT/EN; deploy Docker + Caddy (`DEPLOY.md`); dati veri su volume
 fuori da git.
 
-**Aperti / idee:** badge a livello aggregato (§6, "Governatore/Anschluss…"); geocoder
-offline opzionale; rifinitura km² per unità estere sovradimensionate.
+**Espansione (luglio 2026):** **punteggio** combinato che ordina la classifica (§4.1);
+oltre 50 achievement (30 pubblici + segreti + **manuali**, §6); **bandiere** in
+classifica; galleria coi selfie in **modale** (foto/video) + numero progressivo, quota,
+"vedi sulla mappa"; **video** nel popup dei dump + **spiderfy** dei pin sovrapposti;
+modali "chi l'ha preso" / "come si prende"; punteggio + rank e badge cliccabili nel
+profilo; admin: **messaggi liberi al gruppo** e **badge speciali** assegnabili a mano;
+bot con **notifica speciale per i segreti**, **podio a punti** nel recap, e ~50 **trigger
+testuali** a parole chiave (`triggers.py`, frequenza via `CONQUISTERCO_TRIGGER_CHANCE`).
+
+**Aperti / idee:** badge a livello aggregato (§6, "Governatore/Viceré…"); geocoder
+offline opzionale; rifinitura km² per unità estere sovradimensionate; eventuale "albo
+d'oro per anno" per i superlativi annuali (Capodanno/Ultima Chiamata).
