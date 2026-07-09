@@ -387,6 +387,12 @@ def _recap_message(recap: dict) -> str | None:
     else:
         lines += ["🇮🇹 Nessuno ha cagato. Silenzio tombale (e intestinale).",
                   "🇬🇧 Nobody dumped. Deathly (and intestinal) silence."]
+    podium = recap.get("podium") or []
+    if podium:
+        lines += ["", "🇮🇹 🏆 Podio a punti — chi domina il cacasto:",
+                  "🇬🇧 🏆 Score podium — who rules the cadastre:"]
+        lines += [f"{m} {name} — {score}"
+                  for m, (name, score) in zip(("🥇", "🥈", "🥉"), podium)]
     if slackers:
         it, en = random.choice(_NUDGE)
         lines += ["", f"🇮🇹 {it.format(who=_join_names(slackers, 'e'))}",

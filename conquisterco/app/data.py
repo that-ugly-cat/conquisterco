@@ -260,7 +260,9 @@ def weekly_recap(conn: sqlite3.Connection) -> dict:
     dumpers = sorted(((r["name"], week.get(r["id"], 0)) for r in active if week.get(r["id"], 0) > 0),
                      key=lambda x: -x[1])
     slackers = [r["name"] for r in active if week.get(r["id"], 0) == 0]
-    return {"dumpers": dumpers, "slackers": slackers}
+    # podio a punteggio (classifica generale, non solo la settimana)
+    podium = [(r["name"], r["score"]) for r in main_leaderboard(conn)[:3]]
+    return {"dumpers": dumpers, "slackers": slackers, "podium": podium}
 
 
 def record_holders(conn: sqlite3.Connection) -> dict[str, int | None]:

@@ -240,6 +240,16 @@ def test_weekly_recap():
     assert "Carol" in msg and "🇮🇹" in msg and "🇬🇧" in msg
 
 
+def test_recap_include_podio_a_punti():
+    msg = bot._recap_message({
+        "dumpers": [("Alice", 2)], "slackers": [],
+        "podium": [("Alice", 120), ("Bob", 90), ("Carol", 30)],
+    })
+    assert "🥇 Alice — 120" in msg
+    assert "🥈 Bob — 90" in msg
+    assert "🥉 Carol — 30" in msg
+
+
 def test_solo_dal_gruppo_autorizzato(tmp_path):
     conn = fresh_db(":memory:")
     old = bot.ALLOWED_CHAT
