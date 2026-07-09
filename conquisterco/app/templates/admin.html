@@ -82,6 +82,36 @@
       <select name="into_user">{% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select>
       <button class="btn-danger">{{ T.adm_merge_btn }}</button>
     </form>
+
+    <h2>{{ T.adm_badge_title }}</h2>
+    <p class="muted">{{ T.adm_badge_hint }}</p>
+    {% if manual_badges %}
+    <form method="post" action="/admin/badge" class="admin-create">
+      <input type="hidden" name="action" value="grant">
+      <select name="user_id">{% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select>
+      <select name="code">{% for b in manual_badges %}<option value="{{ b.code }}">{{ b.icon or '🏅' }} {{ b.name }}</option>{% endfor %}</select>
+      <button>{{ T.adm_badge_grant }}</button>
+    </form>
+    {% if manual_assignments %}
+    <table class="admin-table" style="margin-top:.6rem">
+      <tr><th>{{ T.th_player }}</th><th>{{ T.tab_badges }}</th><th></th></tr>
+      {% for m in manual_assignments %}
+      <tr>
+        <td>{{ m.user }}</td>
+        <td>{{ m.icon or '🏅' }} {{ m.badge or m.code }}</td>
+        <td class="admin-actions">
+          <form method="post" action="/admin/badge">
+            <input type="hidden" name="action" value="revoke">
+            <input type="hidden" name="user_id" value="{{ m.user_id }}">
+            <input type="hidden" name="code" value="{{ m.code }}">
+            <button class="btn-danger">{{ T.adm_badge_revoke }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="muted">{{ T.adm_badge_none }}</p>{% endif %}
+    {% else %}<p class="muted">{{ T.adm_badge_nomanual }}</p>{% endif %}
   </div>
 </body>
 </html>

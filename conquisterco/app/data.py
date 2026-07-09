@@ -508,6 +508,52 @@ def merge_users(conn: sqlite3.Connection, src: int, dst: int) -> bool:
     return True
 
 
+def manual_badges(conn: sqlite3.Connection) -> list[dict]:
+    """Badge assegnabili a mano (achievements.manual=1), per il pannello admin."""
+    return [{"code": r["code"], "name": r["name"], "icon": r["icon_ref"]}
+            for r in conn.execute(
+                "SELECT code, name, icon_ref FROM achievements WHERE manual=1 AND active=1 ORDER BY name")]
+
+
+def manual_assignments(conn: sqlite3.Connection) -> list[dict]:
+    """Assegnazioni manuali correnti (chi ha cosa), per revocarle dal pannello."""
+    return [
+        {"user_id": r["uid"], "user": r["uname"], "code": r["code"],
+         "badge": r["bname"], "icon": r["icon_ref"]}
+        for r in conn.execute(
+            """SELECT m.user_id AS uid, COALESCE(u.public_name, u.display_name) AS uname,
+                      m.code, a.name AS bname, a.icon_ref
+               FROM manual_awards m
+               JOIN users u ON u.id = m.user_id
+               LEFT JOIN achievements a ON a.code = m.code
+               ORDER BY uname, bname""")
+    ]
+
+
+def grant_manual_badge(conn: sqlite3.Connection, uid: int, code: str, context: str | None = None) -> bool:
+    """Assegna a mano un badge manuale a un utente (persiste in manual_awards, poi
+    finalize ricalcola). False se il code non è un badge manuale valido."""
+    from ..pipeline import finalize
+    row = conn.execute("SELECT 1 FROM achievements WHERE code=? AND manual=1", (code,)).fetchone()
+    if row is None or conn.execute("SELECT 1 FROM users WHERE id=?", (uid,)).fetchone() is None:
+        return False
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn.execute("INSERT OR REPLACE INTO manual_awards (user_id, code, ts, context) VALUES (?,?,?,?)",
+                 (uid, code, ts, context))
+    conn.commit()
+    finalize(conn)
+    return True
+
+
+def revoke_manual_badge(conn: sqlite3.Connection, uid: int, code: str) -> bool:
+    """Revoca un badge manuale (rimuove da manual_awards + finalize)."""
+    from ..pipeline import finalize
+    cur = conn.execute("DELETE FROM manual_awards WHERE user_id=? AND code=?", (uid, code))
+    conn.commit()
+    finalize(conn)
+    return cur.rowcount > 0
+
+
 def achievements(conn: sqlite3.Connection, t: dict | None = None) -> list[dict]:
     """Legenda dei badge: nome, descrizione, icona + quanti li hanno presi.
     Se `t` (tabella traduzioni) è dato, nome/descrizione sono tradotti per codice."""

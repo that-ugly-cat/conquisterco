@@ -75,6 +75,9 @@ def _migrate(conn) -> None:
     if "secret" not in ach_cols:
         conn.execute("ALTER TABLE achievements ADD COLUMN secret INTEGER NOT NULL DEFAULT 0")
         conn.commit()
+    if "manual" not in ach_cols:
+        conn.execute("ALTER TABLE achievements ADD COLUMN manual INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
     conn.execute("""CREATE TABLE IF NOT EXISTS manual_awards (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         code TEXT NOT NULL, ts TEXT NOT NULL, context TEXT,
@@ -392,7 +395,20 @@ def admin_page(request: Request, sent: str = "", conn=Depends(get_db)):
     require_admin(request)
     return templates.TemplateResponse(request, "admin.html", _ctx(
         request, users=data.list_users(conn), me=request.session.get("name"),
-        bot_ok=bot.bot_enabled(), sent=sent))
+        bot_ok=bot.bot_enabled(), sent=sent,
+        manual_badges=data.manual_badges(conn),
+        manual_assignments=data.manual_assignments(conn)))
+
+
+@app.post("/admin/badge")
+def admin_badge(request: Request, user_id: int = Form(...), code: str = Form(...),
+                action: str = Form("grant"), conn=Depends(get_db)):
+    require_admin(request)
+    if action == "revoke":
+        data.revoke_manual_badge(conn, user_id, code)
+    else:
+        data.grant_manual_badge(conn, user_id, code, context="assegnato dall'admin")
+    return RedirectResponse("/admin", status_code=303)
 
 
 @app.post("/admin/broadcast")

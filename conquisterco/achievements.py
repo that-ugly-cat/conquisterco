@@ -35,6 +35,7 @@ class AchievementDef:
     type: str  # 'one_shot' | 'repeatable'
     icon: str | None
     secret: bool
+    manual: bool   # assegnato a mano dal Sistema (via manual_awards), non derivato
     fn: Callable[["EvalContext"], list[Award]]
 
 
@@ -43,11 +44,11 @@ REGISTRY: dict[str, AchievementDef] = {}
 
 def achievement(code: str, name: str, description: str, *,
                 type: str = "repeatable", icon: str | None = None,
-                secret: bool = False):
+                secret: bool = False, manual: bool = False):
     def deco(fn: Callable[["EvalContext"], list[Award]]):
         if code in REGISTRY:
             raise ValueError(f"achievement duplicato: {code}")
-        REGISTRY[code] = AchievementDef(code, name, description, type, icon, secret, fn)
+        REGISTRY[code] = AchievementDef(code, name, description, type, icon, secret, manual, fn)
         return fn
     return deco
 
@@ -733,7 +734,8 @@ def _avignone(ctx: EvalContext) -> list[Award]:
 # ---------------------------------------------------------------------------
 
 @achievement("gatto_sul_cesso", "Gatto sul Cesso",
-             "Solo per gatti molto speciali. Lo assegna il Sistema.", type="one_shot", icon="🐱")
+             "Solo per gatti molto speciali. Lo assegna il Sistema.",
+             type="one_shot", icon="🐱", manual=True)
 def _gatto_sul_cesso(ctx: EvalContext) -> list[Award]:
     return [Award("gatto_sul_cesso", m["user_id"], m["ts"], m["context"])
             for m in ctx.manual_awards if m["code"] == "gatto_sul_cesso"]
@@ -874,12 +876,13 @@ def sync_achievements(conn: sqlite3.Connection) -> None:
     """Allinea la tabella `achievements` col registry (upsert per code)."""
     for d in REGISTRY.values():
         conn.execute(
-            """INSERT INTO achievements (code, name, description, type, icon_ref, secret, active)
-               VALUES (?,?,?,?,?,?,1)
+            """INSERT INTO achievements (code, name, description, type, icon_ref, secret, manual, active)
+               VALUES (?,?,?,?,?,?,?,1)
                ON CONFLICT(code) DO UPDATE SET
                  name=excluded.name, description=excluded.description,
-                 type=excluded.type, icon_ref=excluded.icon_ref, secret=excluded.secret""",
-            (d.code, d.name, d.description, d.type, d.icon, int(d.secret)),
+                 type=excluded.type, icon_ref=excluded.icon_ref,
+                 secret=excluded.secret, manual=excluded.manual""",
+            (d.code, d.name, d.description, d.type, d.icon, int(d.secret), int(d.manual)),
         )
     conn.commit()
 

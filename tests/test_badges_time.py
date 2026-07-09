@@ -150,6 +150,29 @@ def test_gatto_sul_cesso_manuale_sopravvive_al_finalize(conn, geo):
     assert "gatto_sul_cesso" in awarded
 
 
+def test_admin_grant_revoke_badge_manuale(conn, geo):
+    from conquisterco.app import data
+    from conquisterco.ingest import add_user
+    from conquisterco.pipeline import run_all
+    a = add_user(conn, "Tiglia")
+    dep(conn, a, 1012, "2025-01-18 10:34:00")
+    run_all(conn, geo)   # sincronizza la tabella achievements (colonna manual)
+
+    assert any(b["code"] == "gatto_sul_cesso" for b in data.manual_badges(conn))
+    assert data.grant_manual_badge(conn, a, "gatto_sul_cesso") is True
+    got = {r["code"] for r in conn.execute(
+        "SELECT a.code FROM awards w JOIN achievements a ON a.id=w.achievement_id WHERE w.user_id=?", (a,))}
+    assert "gatto_sul_cesso" in got
+    assert any(m["code"] == "gatto_sul_cesso" for m in data.manual_assignments(conn))
+    # un badge NON manuale non è assegnabile a mano
+    assert data.grant_manual_badge(conn, a, "blitz") is False
+    # revoca
+    assert data.revoke_manual_badge(conn, a, "gatto_sul_cesso") is True
+    got2 = {r["code"] for r in conn.execute(
+        "SELECT a.code FROM awards w JOIN achievements a ON a.id=w.achievement_id WHERE w.user_id=?", (a,))}
+    assert "gatto_sul_cesso" not in got2
+
+
 def test_segreti_nascosti_dalla_legenda_ma_assegnati(conn, geo):
     """Un badge segreto scatta e finisce negli award, ma NON compare nella
     legenda pubblica del modale."""
