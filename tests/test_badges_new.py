@@ -119,6 +119,23 @@ def test_imperialista_quattro_stati(conn):
     assert "imperialista_anale" in codes(conn)[a]
 
 
+def test_badge_soglia_ts_stabile(conn):
+    """Regressione: un badge-soglia (colonialista) NON deve cambiare ts/context
+    quando arrivano dump successivi — altrimenti il bot lo riannuncia ogni volta."""
+    from conquisterco.app import data
+    from conquisterco.pipeline import run_all
+    a = add_user(conn, "A")
+    dep(conn, a, 9101, "2026-05-01 09:00:00")   # IT
+    dep(conn, a, 9103, "2026-05-02 09:00:00")   # FR → 2 stati (soglia raggiunta qui)
+    run_all(conn, geo())
+    ev1 = {(c, ts, ctx) for c, u, ts, ctx in data.award_events(conn) if c == "colonialista_anale"}
+    assert ev1
+    dep(conn, a, 9106, "2026-06-01 09:00:00")   # DE: nuovo comune/stato più tardi
+    run_all(conn, geo())
+    ev2 = {(c, ts, ctx) for c, u, ts, ctx in data.award_events(conn) if c == "colonialista_anale"}
+    assert ev1 == ev2   # stesso ts (primo raggiungimento) e context fisso
+
+
 # --- luoghi -----------------------------------------------------------------
 
 def test_checkpoint_charlie_berlino(conn):

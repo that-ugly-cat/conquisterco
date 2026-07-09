@@ -40,6 +40,11 @@ class ReplayResult:
     max_owned: dict[int, int] = field(default_factory=dict)          # user -> max comuni insieme
     max_owned_by_country: dict[str, dict[int, int]] = field(default_factory=dict)  # country -> user -> max
     max_states: dict[int, int] = field(default_factory=dict)         # user -> max stati owner-aggregato insieme
+    # primo ts in cui un utente raggiunge un dato conteggio simultaneo (ts STABILE
+    # per i badge-soglia: non si sposta quando arrivano dump successivi).
+    first_owned: dict[int, dict[int, str]] = field(default_factory=dict)   # user -> {n_comuni -> ts}
+    first_states: dict[int, dict[int, str]] = field(default_factory=dict)  # user -> {n_stati -> ts}
+    first_by_country: dict[str, dict[int, dict[int, str]]] = field(default_factory=dict)  # country -> user -> {n -> ts}
 
 
 def _leader(owner_by_t: dict[int, int]) -> int | None:
@@ -70,6 +75,10 @@ def replay_flips(flips: list[dict], territory_country: dict[int, str | None],
         if value > d.get(user, 0):
             d[user] = value
 
+    def first_seen(d: dict[int, dict[int, str]], user: int, value: int, ts: str) -> None:
+        """Registra il PRIMO ts in cui `user` raggiunge il conteggio `value`."""
+        d.setdefault(user, {}).setdefault(value, ts)
+
     for f in flips:
         t = f["territory"]
         newo = f["new_owner"]
@@ -99,17 +108,20 @@ def replay_flips(flips: list[dict], territory_country: dict[int, str | None],
             last_real_owner[t] = newo
         prev_flip[t] = f
 
-        # aggiorna i record di possesso simultaneo
+        # aggiorna i record di possesso simultaneo (+ primo ts per soglia)
         totals = Counter(owner_by_t.values())
         for u, c in totals.items():
             bump(res.max_owned, u, c)
+            first_seen(res.first_owned, u, c, f["ts"])
         for country in track_countries:
             sub = Counter(
                 u for tt, u in owner_by_t.items()
                 if territory_country.get(tt) == country
             )
+            frc = res.first_by_country.setdefault(country, {})
             for u, c in sub.items():
                 bump(res.max_owned_by_country[country], u, c)
+                first_seen(frc, u, c, f["ts"])
 
         # stati posseduti in contemporanea: owner-aggregato di un paese = chi vi
         # controlla più comuni in modo STRETTO (logica A, un livello sopra).
@@ -126,5 +138,6 @@ def replay_flips(flips: list[dict], territory_country: dict[int, str | None],
                 states_owned[leaders[0]] += 1
         for u, c in states_owned.items():
             bump(res.max_states, u, c)
+            first_seen(res.first_states, u, c, f["ts"])
 
     return res

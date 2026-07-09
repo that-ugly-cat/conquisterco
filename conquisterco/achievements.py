@@ -336,20 +336,15 @@ def _guardiano(ctx: EvalContext) -> list[Award]:
 @achievement("spartizione_polonia", "Spartizione della Polonia",
              f"Possiedi {config.POLONIA_COMUNI} comuni polacchi in contemporanea.", icon="🇵🇱")
 def _spartizione(ctx: EvalContext) -> list[Award]:
+    n = config.POLONIA_COMUNI
+    pl_max = ctx.replay.max_owned_by_country.get("PL", {})
+    pl_first = ctx.replay.first_by_country.get("PL", {})
     out = []
-    pl = ctx.replay.max_owned_by_country.get("PL", {})
-    for uid, mx in pl.items():
-        if mx >= config.POLONIA_COMUNI:
-            out.append(Award("spartizione_polonia", uid, _last_pl_flip_ts(ctx, uid), f"{mx} comuni PL"))
+    for uid, mx in pl_max.items():
+        if mx >= n:
+            ts = _first_reach(pl_first, uid, n) or ctx.last_flip_ts_for(uid)
+            out.append(Award("spartizione_polonia", uid, ts, f"≥{n} comuni PL"))
     return out
-
-
-def _last_pl_flip_ts(ctx: EvalContext, uid: int) -> str:
-    ts = None
-    for f in ctx.flips:
-        if f["new_owner"] == uid and ctx.territory_country.get(f["territory"]) == "PL":
-            ts = f["ts"]
-    return ts or (ctx.deposits[-1]["ts"] if ctx.deposits else "1970-01-01 00:00:00")
 
 
 # ---------------------------------------------------------------------------
@@ -619,14 +614,23 @@ def _anschluss(ctx: EvalContext) -> list[Award]:
     return out
 
 
+def _first_reach(m: dict[int, dict[int, str]], uid: int, threshold: int) -> str | None:
+    """Primo ts in cui l'utente ha raggiunto un conteggio >= soglia (ts STABILE:
+    non si sposta all'arrivo di dump successivi). None se mai raggiunta."""
+    reached = [ts for c, ts in m.get(uid, {}).items() if c >= threshold]
+    return min(reached) if reached else None
+
+
 @achievement("colonialista_anale", "Colonialista Anale",
              f"Sei owner-aggregato di almeno {config.COLONIALISTA_STATES} stati insieme.",
              type="one_shot", icon="🗺️")
 def _colonialista(ctx: EvalContext) -> list[Award]:
+    n = config.COLONIALISTA_STATES
     return [
-        Award("colonialista_anale", uid, ctx.last_flip_ts_for(uid), f"{mx} stati")
-        for uid, mx in ctx.replay.max_states.items()
-        if mx >= config.COLONIALISTA_STATES
+        Award("colonialista_anale", uid,
+              _first_reach(ctx.replay.first_states, uid, n) or ctx.last_flip_ts_for(uid),
+              f"≥{n} stati")
+        for uid, mx in ctx.replay.max_states.items() if mx >= n
     ]
 
 
@@ -634,10 +638,12 @@ def _colonialista(ctx: EvalContext) -> list[Award]:
              f"Sei owner-aggregato di almeno {config.IMPERIALISTA_STATES} stati insieme.",
              type="one_shot", icon="👑")
 def _imperialista(ctx: EvalContext) -> list[Award]:
+    n = config.IMPERIALISTA_STATES
     return [
-        Award("imperialista_anale", uid, ctx.last_flip_ts_for(uid), f"{mx} stati")
-        for uid, mx in ctx.replay.max_states.items()
-        if mx >= config.IMPERIALISTA_STATES
+        Award("imperialista_anale", uid,
+              _first_reach(ctx.replay.first_states, uid, n) or ctx.last_flip_ts_for(uid),
+              f"≥{n} stati")
+        for uid, mx in ctx.replay.max_states.items() if mx >= n
     ]
 
 
@@ -645,10 +651,12 @@ def _imperialista(ctx: EvalContext) -> list[Award]:
              f"Possiedi almeno {config.GRANDUCA_COMUNI} comuni in contemporanea.",
              type="one_shot", icon="🎖️")
 def _granduca(ctx: EvalContext) -> list[Award]:
+    n = config.GRANDUCA_COMUNI
     return [
-        Award("granduca_colon", uid, ctx.last_flip_ts_for(uid), f"{mx} comuni")
-        for uid, mx in ctx.replay.max_owned.items()
-        if mx >= config.GRANDUCA_COMUNI
+        Award("granduca_colon", uid,
+              _first_reach(ctx.replay.first_owned, uid, n) or ctx.last_flip_ts_for(uid),
+              f"≥{n} comuni")
+        for uid, mx in ctx.replay.max_owned.items() if mx >= n
     ]
 
 
