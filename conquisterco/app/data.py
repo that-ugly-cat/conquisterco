@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections import Counter, defaultdict
-from datetime import date
+from datetime import date, datetime, timedelta
 
 # peso medio stimato di un deposito (g). Fonte: peso medio delle feci ~128 g.
 AVG_DUMP_G = 128
@@ -233,6 +233,28 @@ def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
 
     items.reverse()   # più recenti prima
     return items[:limit]
+
+
+def weekly_recap(conn: sqlite3.Connection) -> dict:
+    """Riepilogo della settimana corrente (da lunedì 00:00). `dumpers`: chi ha
+    cagato, con quante volte, in ordine. `slackers`: chi è attivo di recente
+    (≥1 deposito negli ultimi 30 giorni) ma questa settimana ha fatto zero."""
+    now = datetime.now()
+    week_start = (now - timedelta(days=now.weekday())).replace(
+        hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
+    active_since = (now - timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+
+    week = {r["u"]: r["n"] for r in conn.execute(
+        "SELECT user_id u, COUNT(*) n FROM deposits WHERE ts>=? GROUP BY user_id", (week_start,))}
+    active = conn.execute(
+        """SELECT u.id, COALESCE(u.public_name, u.display_name) name FROM users u
+           WHERE EXISTS (SELECT 1 FROM deposits d WHERE d.user_id=u.id AND d.ts>=?)
+           ORDER BY name""", (active_since,)).fetchall()
+
+    dumpers = sorted(((r["name"], week.get(r["id"], 0)) for r in active if week.get(r["id"], 0) > 0),
+                     key=lambda x: -x[1])
+    slackers = [r["name"] for r in active if week.get(r["id"], 0) == 0]
+    return {"dumpers": dumpers, "slackers": slackers}
 
 
 def record_holders(conn: sqlite3.Connection) -> dict[str, int | None]:

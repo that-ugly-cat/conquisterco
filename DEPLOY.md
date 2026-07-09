@@ -78,3 +78,15 @@ conquisterco.borant.eu {
 Ogni pin nel gruppo = un dump; la foto (entro 2 min, anche prima del pin) fa da
 selfie. Chi non è agganciato ottiene un account provvisorio, reclamabile dal
 profilo con **Collega Telegram** (deep-link).
+
+## Recap settimanale (cron)
+
+Il bot manda un riepilogo ogni **domenica alle 20:00** tramite cron dell'host
+(fuso orario dell'host = Europe/Rome, o imposta `TZ`). `crontab -e`:
+
+```
+0 20 * * 0  cd /opt/app/conquisterco && docker compose exec -T conquisterco uv run --no-sync conquisterco-recap
+```
+
+Elenca chi ha cagato quante volte nella settimana (da lunedì) e punzecchia chi,
+pur attivo negli ultimi 30 giorni, questa settimana non ha depositato nulla.

@@ -173,6 +173,36 @@ def test_help(tmp_path):
     assert tg.sent and "How to play" in tg.sent[0][1]
 
 
+def test_weekly_recap():
+    from datetime import datetime, timedelta
+
+    from conquisterco.app import data
+    from conquisterco.ingest import add_deposit, add_user
+    conn = fresh_db(":memory:")
+    now = datetime.now()
+
+    def ts(dt):
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    a = add_user(conn, "Alice")
+    b = add_user(conn, "Bob")
+    c = add_user(conn, "Carol")
+    # questa settimana: Alice ×2, Bob ×1
+    add_deposit(conn, user_id=a, ts=ts(now), lat=1.0, lon=1.0, source="telegram")
+    add_deposit(conn, user_id=a, ts=ts(now), lat=1.1, lon=1.0, source="telegram")
+    add_deposit(conn, user_id=b, ts=ts(now), lat=2.0, lon=2.0, source="telegram")
+    # Carol: attiva (10 gg fa) ma zero questa settimana → latitante
+    add_deposit(conn, user_id=c, ts=ts(now - timedelta(days=10)), lat=3.0, lon=3.0, source="telegram")
+
+    rec = data.weekly_recap(conn)
+    assert dict(rec["dumpers"]) == {"Alice": 2, "Bob": 1}
+    assert rec["slackers"] == ["Carol"]
+
+    msg = bot._recap_message(rec)
+    assert "Alice — 2 💩" in msg and "Bob — 1 💩" in msg
+    assert "Carol" in msg and "🇮🇹" in msg and "🇬🇧" in msg
+
+
 def test_solo_dal_gruppo_autorizzato(tmp_path):
     conn = fresh_db(":memory:")
     old = bot.ALLOWED_CHAT

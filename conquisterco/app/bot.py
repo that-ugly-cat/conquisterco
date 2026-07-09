@@ -318,6 +318,58 @@ def _tie_message(comune: str, contenders: list) -> str:
     return f"🇮🇹 {it.format(c=comune, who=who_it)}\n🇬🇧 {en.format(c=comune, who=who_en)}"
 
 
+# --- RECAP settimanale: frecciatina ai latitanti ({who} = chi ha fatto zero)
+_NUDGE = [
+    ("💤 {who}: stitici o solo timidi? Il vostro colon manda i saluti.",
+     "💤 {who}: constipated or just shy? Your colon says hi."),
+    ("🚽 {who} non hanno prodotto nulla. La montagna resta, e non partorisce nemmeno un topolino.",
+     "🚽 {who} produced nothing. The mountain remains, and not even a mouse comes out."),
+    ("🧻 Settimana a secco per {who}. Più fibre, meno scuse.",
+     "🧻 A dry week for {who}. More fiber, fewer excuses."),
+    ("😳 {who}, la timidezza da bagno pubblico non è una scusa. Vi aspettiamo.",
+     "😳 {who}, public-toilet shyness is no excuse. We're waiting."),
+    ("🪨 {who} sono in blocco totale. Si consigliano prugne, e coraggio.",
+     "🪨 {who} are fully blocked. We recommend prunes, and courage."),
+    ("📉 Zero depositi per {who}. Il gioco è a base fecale: si partecipa.",
+     "📉 Zero deposits from {who}. The game runs on poop: participate."),
+    ("🐢 {who} latitano. O stitici, o senza fegato. Entrambe curabili.",
+     "🐢 {who} are AWOL. Constipated or gutless. Both are curable."),
+    ("🕳️ {who} non hanno lasciato traccia. La leggenda vuole che esistano ancora.",
+     "🕳️ {who} left no trace. Legend says they still exist."),
+    ("⏳ {who}: la settimana è finita, il vostro intestino no. Datevi da fare.",
+     "⏳ {who}: the week is over, your bowels aren't. Get to it."),
+    ("🎭 {who}, o siete stitici o vi vergognate. In entrambi i casi, il gruppo giudica.",
+     "🎭 {who}, either constipated or embarrassed. Either way, the group is judging."),
+]
+
+
+def _recap_message(recap: dict) -> str | None:
+    dumpers, slackers = recap["dumpers"], recap["slackers"]
+    if not dumpers and not slackers:
+        return None   # niente da dire
+    lines = ["🇮🇹 📅 Recap della settimana — il catasto fecale tira le somme.",
+             "🇬🇧 📅 Weekly recap — the fecal cadastre tallies up.", ""]
+    if dumpers:
+        lines += [f"{i}. {name} — {n} 💩" for i, (name, n) in enumerate(dumpers, 1)]
+    else:
+        lines += ["🇮🇹 Nessuno ha cagato. Silenzio tombale (e intestinale).",
+                  "🇬🇧 Nobody dumped. Deathly (and intestinal) silence."]
+    if slackers:
+        it, en = random.choice(_NUDGE)
+        lines += ["", f"🇮🇹 {it.format(who=_join_names(slackers, 'e'))}",
+                  f"🇬🇧 {en.format(who=_join_names(slackers, 'and'))}"]
+    return "\n".join(lines)
+
+
+def send_weekly_recap(conn, client=None) -> bool:
+    """Costruisce e invia il recap al gruppo. Ritorna True se inviato."""
+    msg = _recap_message(data.weekly_recap(conn))
+    if not msg or not ALLOWED_CHAT:
+        return False
+    (client or TelegramClient()).send_message(ALLOWED_CHAT, msg)
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Handler
 # ---------------------------------------------------------------------------
