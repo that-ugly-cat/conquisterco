@@ -290,15 +290,6 @@ def me_page(request: Request, conn=Depends(get_db)):
         legend=data.achievements(conn, get_t(request))))
 
 
-@app.post("/me/avatar")
-def me_avatar(request: Request, file: UploadFile = File(...), conn=Depends(get_db)):
-    require_login(request)
-    ref = _save_image(file, "avatar", request.session["uid"])
-    conn.execute("UPDATE users SET avatar_ref=? WHERE id=?", (ref, request.session["uid"]))
-    conn.commit()
-    return RedirectResponse("/me", status_code=303)
-
-
 @app.post("/me/flag")
 def me_flag(request: Request, file: UploadFile = File(...), conn=Depends(get_db)):
     require_login(request)
@@ -373,11 +364,6 @@ def me_delete(request: Request, conn=Depends(get_db)):
     data.delete_user(conn, request.session["uid"], MEDIA_DIR)
     request.session.clear()
     return RedirectResponse("/", status_code=303)
-
-
-@app.get("/media/avatar/{uid}")
-def media_avatar(uid: int, conn=Depends(get_db)):
-    return _serve_profile_image(conn, uid, "avatar_ref")
 
 
 @app.get("/media/flag/{uid}")

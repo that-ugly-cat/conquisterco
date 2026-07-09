@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date
 
 # peso medio stimato di un deposito (g). Fonte: peso medio delle feci ~128 g.
 AVG_DUMP_G = 128
 
 from ..leaderboards import _streaks, main_leaderboard, records
+from ..recompute import owner_of
 
 _RECORD_LABELS = {
     "nord": "Più a Nord", "sud": "Più a Sud", "est": "Più a Est", "ovest": "Più a Ovest",
@@ -66,97 +67,112 @@ def territories_geo(conn: sqlite3.Connection) -> list[dict]:
     return out
 
 
-def _contenders(conn: sqlite3.Connection, level: str) -> dict[int, list[str]]:
-    """Per le unità CONTESE, i giocatori in parità in testa (tra chi e chi)."""
+def _contenders(conn: sqlite3.Connection) -> dict[int, list[str]]:
+    """Per i COMUNI contesi, i giocatori in parità in testa (tra chi e chi)."""
     users = _names(conn)
     out: dict[int, list[str]] = defaultdict(list)
-    if level == "comune":
-        for r in conn.execute(
-            """SELECT s.territory_osm_id t, s.user_id u
-               FROM standings s JOIN territory_ownership o ON o.territory_osm_id = s.territory_osm_id
-               WHERE o.is_contested = 1 AND s.deposit_count = o.top_count
-               ORDER BY s.user_id"""
-        ):
-            out[r["t"]].append(_pub(users.get(r["u"])))
-    else:
-        col = {"province": "province_osm_id", "region": "region_osm_id",
-               "country": "country_osm_id"}[level]
-        # comuni posseduti per unità/utente (per il pareggio tra owner)
-        tally: dict[int, dict[int, int]] = defaultdict(dict)
-        units: set[int] = set()
-        for r in conn.execute(
-            f"""SELECT t.{col} unit, o.owner_user_id u
-                FROM territory_ownership o JOIN territories t ON t.osm_id = o.territory_osm_id
-                WHERE t.{col} IS NOT NULL"""
-        ):
-            units.add(r["unit"])
-            if r["u"] is not None:
-                d = tally[r["unit"]]
-                d[r["u"]] = d.get(r["u"], 0) + 1
-        # contendenti dei comuni contesi (per unità senza alcun comune posseduto)
-        from_contested: dict[int, set] = defaultdict(set)
-        for r in conn.execute(
-            f"""SELECT t.{col} unit, s.user_id u
-                FROM standings s
-                JOIN territory_ownership o ON o.territory_osm_id = s.territory_osm_id
-                JOIN territories t ON t.osm_id = s.territory_osm_id
-                WHERE o.is_contested = 1 AND s.deposit_count = o.top_count AND t.{col} IS NOT NULL"""
-        ):
-            from_contested[r["unit"]].add(r["u"])
-        for unit in units:
-            d = tally.get(unit, {})
-            if d:  # pareggio tra chi possiede più comuni
-                top = max(d.values())
-                tied = sorted(u for u, c in d.items() if c == top)
-                if len(tied) > 1:
-                    out[unit] = [_pub(users.get(u)) for u in tied]
-            else:  # nessun comune posseduto → i contendenti sono quelli dei comuni contesi
-                people = sorted(from_contested.get(unit, set()))
-                if people:
-                    out[unit] = [_pub(users.get(u)) for u in people]
+    for r in conn.execute(
+        """SELECT s.territory_osm_id t, s.user_id u
+           FROM standings s JOIN territory_ownership o ON o.territory_osm_id = s.territory_osm_id
+           WHERE o.is_contested = 1 AND s.deposit_count = o.top_count ORDER BY s.user_id"""
+    ):
+        out[r["t"]].append(_pub(users.get(r["u"])))
     return out
 
 
+def _unit_geo(conn: sqlite3.Connection, osm_id: int) -> dict | None:
+    """Nome + centroide + geometria di un'unità (admin_unit o comune)."""
+    for tbl in ("admin_units", "territories"):
+        r = conn.execute(
+            f"SELECT name, centroid_lat clat, centroid_lon clon, geometry_geojson geo "
+            f"FROM {tbl} WHERE osm_id=?", (osm_id,)).fetchone()
+        if r and r["geo"]:
+            return {"name": r["name"], "geometry": json.loads(r["geo"]),
+                    "centroid": [r["clat"], r["clon"]] if r["clat"] is not None else None}
+    return None
+
+
+def _feature(osm_id, name, level, geo, owner_id, owner, contested, count, contenders) -> dict:
+    return {
+        "osm_id": osm_id, "name": name, "level": level,
+        "centroid": geo["centroid"], "geometry": geo["geometry"],
+        "owner_id": owner_id, "owner_name": _pub(owner),
+        "owner_color": owner["color"] if owner else None,
+        "owner_flag": f"/media/flag/{owner_id}" if owner and owner["flag_ref"] else None,
+        "is_contested": bool(contested), "count": count,
+        "contenders": contenders if contested else None,
+    }
+
+
+# antenati da guardare per livello, dal più fine al più grosso
+_LEVEL_CHAIN = {
+    "province": ("province_osm_id",),
+    "region": ("region_osm_id", "province_osm_id"),
+    "country": ("country_osm_id", "region_osm_id", "province_osm_id"),
+}
+
+
 def areas(conn: sqlite3.Connection, level: str) -> list[dict]:
-    """Aree con geometria per un livello del LOD: 'comune' (da territories +
-    territory_ownership) o 'province'/'region'/'country' (da admin_units +
-    aggregate_ownership). Ritorna Feature-like con geometria GeoJSON."""
+    """Aree con geometria per un livello del LOD. Il comune usa territories; gli
+    aggregati usano un 'rappresentante' per comune (primo antenato disponibile,
+    o il comune stesso se la gerarchia è piatta) → nessuna area cacata sparisce
+    nei paesi senza province/regioni distinte (Croazia, Slovenia, Islanda…)."""
     users = _names(conn)
-    contenders = _contenders(conn, level)
     if level == "comune":
-        rows = conn.execute(
+        contenders = _contenders(conn)
+        out = []
+        for r in conn.execute(
             """SELECT t.osm_id, t.name, t.centroid_lat clat, t.centroid_lon clon,
-                      t.geometry_geojson geo, o.owner_user_id uid, o.is_contested c,
-                      o.top_count cnt
-               FROM territories t
-               LEFT JOIN territory_ownership o ON o.territory_osm_id = t.osm_id
+                      t.geometry_geojson geo, o.owner_user_id uid, o.is_contested c, o.top_count cnt
+               FROM territories t LEFT JOIN territory_ownership o ON o.territory_osm_id = t.osm_id
                WHERE t.geometry_geojson IS NOT NULL"""
-        )
-    else:
-        rows = conn.execute(
-            """SELECT a.osm_id, a.name, a.centroid_lat clat, a.centroid_lon clon,
-                      a.geometry_geojson geo, g.owner_user_id uid, g.is_contested c,
-                      g.comuni_owned cnt
-               FROM admin_units a
-               LEFT JOIN aggregate_ownership g ON g.unit_osm_id = a.osm_id
-               WHERE a.kind = ? AND a.geometry_geojson IS NOT NULL""",
-            (level,),
-        )
+        ):
+            owner = users.get(r["uid"]) if r["uid"] else None
+            geo = {"geometry": json.loads(r["geo"]),
+                   "centroid": [r["clat"], r["clon"]] if r["clat"] is not None else None}
+            out.append(_feature(r["osm_id"], r["name"], "comune", geo, r["uid"], owner,
+                                r["c"], r["cnt"] or 0, contenders.get(r["osm_id"])))
+        return out
+    return _aggregate_areas(conn, level, users)
+
+
+def _aggregate_areas(conn: sqlite3.Connection, level: str, users: dict) -> list[dict]:
+    chain = _LEVEL_CHAIN[level]
+    # contendenti (top-count) dei comuni contesi
+    contested_comuni: dict[int, list[int]] = defaultdict(list)
+    for r in conn.execute(
+        """SELECT s.territory_osm_id t, s.user_id u FROM standings s
+           JOIN territory_ownership o ON o.territory_osm_id = s.territory_osm_id
+           WHERE o.is_contested = 1 AND s.deposit_count = o.top_count ORDER BY s.user_id"""
+    ):
+        contested_comuni[r["t"]].append(r["u"])
+    # raggruppa i comuni per rappresentante a questo livello
+    members: dict[int, list] = defaultdict(list)
+    for c in conn.execute(
+        """SELECT t.osm_id, t.province_osm_id, t.region_osm_id, t.country_osm_id,
+                  o.owner_user_id owner FROM territories t
+           LEFT JOIN territory_ownership o ON o.territory_osm_id = t.osm_id
+           WHERE t.geometry_geojson IS NOT NULL"""
+    ):
+        rep = next((c[col] for col in chain if c[col] is not None), None) or c["osm_id"]
+        members[rep].append(c)
+
     out = []
-    for r in rows:
-        owner = users.get(r["uid"]) if r["uid"] else None
-        out.append({
-            "osm_id": r["osm_id"], "name": r["name"], "level": level,
-            "centroid": [r["clat"], r["clon"]] if r["clat"] is not None else None,
-            "geometry": json.loads(r["geo"]),
-            "owner_id": r["uid"],
-            "owner_name": _pub(owner),
-            "owner_color": owner["color"] if owner else None,
-            "owner_flag": f"/media/flag/{r['uid']}" if owner and owner["flag_ref"] else None,
-            "is_contested": bool(r["c"]),
-            "count": r["cnt"] or 0,
-            "contenders": contenders.get(r["osm_id"]) if r["c"] else None,
-        })
+    for rep, ms in members.items():
+        geo = _unit_geo(conn, rep)
+        if geo is None:
+            continue
+        owned = Counter(m["owner"] for m in ms if m["owner"] is not None)
+        owner_id, top, contested = owner_of(dict(owned))
+        contenders = None
+        if not owned:            # nessun comune posseduto → conteso
+            contested = True
+            people = sorted({u for m in ms for u in contested_comuni.get(m["osm_id"], [])})
+            contenders = [_pub(users.get(u)) for u in people] or None
+        elif contested:          # pareggio tra chi possiede più comuni
+            contenders = [_pub(users.get(u)) for u, n in sorted(owned.items()) if n == top]
+        owner = users.get(owner_id) if owner_id else None
+        out.append(_feature(rep, geo["name"], level, geo, owner_id, owner, contested, top, contenders))
     return out
 
 
@@ -273,7 +289,7 @@ def my_stats(conn: sqlite3.Connection, uid: int) -> dict | None:
     return {
         "id": uid, "name": _pub(u), "username": u["display_name"],
         "public_name": u["public_name"], "color": u["color"],
-        "has_avatar": bool(u["avatar_ref"]), "has_flag": bool(u["flag_ref"]),
+        "has_flag": bool(u["flag_ref"]),
         "rank": rank, "players": len(lb),
         "comuni": prof["comuni"], "km2": prof["km2"],
         "deposits": c["tot"], "comuni_visitati": c["comuni"],

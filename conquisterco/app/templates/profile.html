@@ -86,13 +86,6 @@
         </form>
         <div class="img-row">
           <div>
-            <div class="img-label">{{ T.avatar }}</div>
-            {% if s.has_avatar %}<img class="prof-img" src="/media/avatar/{{ s.id }}?v={{ range(99999) | random }}">{% else %}<div class="prof-img empty">{{ T.none_m }}</div>{% endif %}
-            <form method="post" action="/me/avatar" enctype="multipart/form-data">
-              <input type="file" name="file" accept="image/*" required><button>{{ T.upload }}</button>
-            </form>
-          </div>
-          <div>
             <div class="img-label">{{ T.flag }} <span class="muted">{{ T.flag_hint }}</span></div>
             {% if s.has_flag %}<img class="prof-img" src="/media/flag/{{ s.id }}?v={{ range(99999) | random }}">{% else %}<div class="prof-img empty">{{ T.none_f }}</div>{% endif %}
             <form method="post" action="/me/flag" enctype="multipart/form-data">
