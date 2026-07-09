@@ -124,13 +124,15 @@ def test_confirm_message_bilingue():
     assert "🇮🇹" in unk and "🇬🇧" in unk
 
 
-def test_annuncio_feed_bilingue(tmp_path):
+def test_annuncio_flip_badge_record(tmp_path):
     conn = fresh_db(":memory:")
     tg = FakeTG()
     bot.process_update(conn, loc(555, username="marco"), client=tg,
                        resolver=FakeResolver(), media_dir=tmp_path)
     joined = " ".join(t for _, t in tg.sent)
-    assert "conquistato" in joined and "conquered" in joined   # IT + EN
+    assert "Tizio" in joined            # il flip nomina l'utente (nome del provvisorio)
+    assert "Colonizzatore" in joined    # badge annunciato (nome IT nel messaggio bilingue)
+    assert "🇮🇹" in joined and "🇬🇧" in joined
 
 
 def test_start_onboarding(tmp_path):

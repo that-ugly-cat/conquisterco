@@ -235,6 +235,19 @@ def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
     return items[:limit]
 
 
+def record_holders(conn: sqlite3.Connection) -> dict[str, int | None]:
+    """Detentore corrente di ogni record superlativo (per rilevare i sorpassi)."""
+    return {k: (v["user_id"] if v else None) for k, v in records(conn).items()}
+
+
+def award_events(conn: sqlite3.Connection) -> set:
+    """Insieme degli award (code, user, ts, context) — per il diff dei badge nuovi."""
+    return {(r["code"], r["user_id"], r["ts_earned"], r["context"])
+            for r in conn.execute(
+                """SELECT a.code, w.user_id, w.ts_earned, w.context
+                   FROM awards w JOIN achievements a ON a.id = w.achievement_id""")}
+
+
 def feed_line_for_deposit(conn: sqlite3.Connection, deposit_id: int) -> dict | None:
     """Evento del feed causato da un deposito (per l'annuncio del bot), o None."""
     f = conn.execute(
