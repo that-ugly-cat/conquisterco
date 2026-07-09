@@ -135,6 +135,17 @@ def test_annuncio_flip_badge_record(tmp_path):
     assert "🇮🇹" in joined and "🇬🇧" in joined
 
 
+def test_badge_message_segreto_vs_pubblico():
+    pub = bot._badge_message("Tizio", "blitz")
+    assert "Blitz" in pub
+    assert "secret" not in pub.lower() and "segreto" not in pub.lower()
+
+    sec = bot._badge_message("Tizio", "serenissima")
+    assert "Serenissima Deposizione" in sec   # il nome segreto è tradotto
+    assert "secret" in sec.lower()             # notifica speciale bilingue
+    assert "🇮🇹" in sec and "🇬🇧" in sec
+
+
 def test_pareggio_a_tre_elenca_tutti(tmp_path):
     conn = fresh_db(":memory:")
     R = FakeResolver()

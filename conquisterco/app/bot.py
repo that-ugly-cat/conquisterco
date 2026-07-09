@@ -22,6 +22,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
+from ..achievements import REGISTRY
 from ..elevation import enrich_altitude
 from ..enrich_osm import enrich_deposits_osm
 from ..ingest import add_deposit
@@ -249,6 +250,18 @@ _BADGE = [
      "📛 New badge for {x}: «{b}». Wear it with pride. Or shame."),
 ]
 
+# --- BADGE SEGRETO: notifica speciale (le meccaniche nascoste del mondo)
+_BADGE_SECRET = [
+    ("🕵️ BADGE SEGRETO! {x} sblocca «{b}» — qualcuno sta svelando le meccaniche nascoste del mondo.",
+     "🕵️ SECRET BADGE! {x} unlocks «{b}» — someone is uncovering the world's hidden mechanics."),
+    ("🔓 Meccanica occulta rivelata: {x} conquista il badge segreto «{b}». Non doveva saperlo nessuno.",
+     "🔓 Hidden mechanic revealed: {x} earns the secret badge «{b}». Nobody was supposed to know."),
+    ("👁️ {x} inciampa in un badge SEGRETO: «{b}». Gli dèi del cacasto sussurrano, e puzzano.",
+     "👁️ {x} stumbles into a SECRET badge: «{b}». The gods of the cadastre whisper, and reek."),
+    ("🤫 Psst… {x} ha appena sbloccato il badge segreto «{b}». Ora fai finta di niente.",
+     "🤫 Psst… {x} just unlocked the secret badge «{b}». Now act natural."),
+]
+
 # --- RECORD ({x} nuovo detentore, {r} nome record tradotto, {z} spodestato)
 _RECORD_TAKE = [
     ("🏆 Record infranto: {x} è ora «{r}». {z} può solo guardare, e annusare.",
@@ -277,8 +290,13 @@ def _flip_message(item: dict) -> str | None:
     return None
 
 
+def _is_secret(code: str) -> bool:
+    d = REGISTRY.get(code)
+    return bool(d and d.secret)
+
+
 def _badge_message(user: str, code: str) -> str:
-    it, en = random.choice(_BADGE)
+    it, en = random.choice(_BADGE_SECRET if _is_secret(code) else _BADGE)
     bi = TRANSLATIONS["it"].get(f"ach_{code}", code)
     be = TRANSLATIONS["en"].get(f"ach_{code}", code)
     return f"🇮🇹 {it.format(x=user, b=bi)}\n🇬🇧 {en.format(x=user, b=be)}"

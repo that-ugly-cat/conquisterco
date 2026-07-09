@@ -196,7 +196,13 @@ def dumps_geo(conn: sqlite3.Connection) -> list[dict]:
 
 
 def leaderboard(conn: sqlite3.Connection) -> dict:
-    return {"main": main_leaderboard(conn), "records": records(conn)}
+    main = main_leaderboard(conn)
+    meta = {r["id"]: r for r in conn.execute("SELECT id, color, flag_ref FROM users")}
+    for row in main:
+        u = meta.get(row["user_id"])
+        row["color"] = u["color"] if u else None
+        row["flag"] = f"/media/flag/{row['user_id']}" if u and u["flag_ref"] else None
+    return {"main": main, "records": records(conn)}
 
 
 def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
@@ -494,7 +500,7 @@ def achievements(conn: sqlite3.Connection, t: dict | None = None) -> list[dict]:
                   COUNT(DISTINCT w.user_id) AS holders
            FROM achievements a
            LEFT JOIN awards w ON w.achievement_id = a.id
-           WHERE a.active = 1
+           WHERE a.active = 1 AND a.secret = 0
            GROUP BY a.id ORDER BY a.name"""
     ):
         name, desc = r["name"], r["description"]

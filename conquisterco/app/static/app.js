@@ -159,7 +159,10 @@ async function loadPanels() {
   let h = `<table><tr><th>${T.th_num}</th><th>${T.th_player}</th>`
     + `<th class='num'>${T.th_comuni}</th><th class='num'>${T.th_km2}</th></tr>`;
   lb.main.forEach((row, i) => {
-    h += `<tr><td>${i + 1}</td><td><span class="swatch" style="background:${esc(row.color || '#6F4E37')}"></span>`
+    const badge = row.flag
+      ? `<img class="lb-flag" src="${esc(row.flag)}" alt="">`
+      : `<span class="swatch" style="background:${esc(row.color || '#6F4E37')}"></span>`;
+    h += `<tr><td>${i + 1}</td><td>${badge}`
       + `<span class="player-link" onclick="showProfile(${row.user_id})">${esc(row.name)}</span></td>`
       + `<td class="num">${row.comuni}</td><td class="num">${row.km2}</td></tr>`;
   });

@@ -108,6 +108,7 @@ th,td{text-align:left;padding:.35rem .3rem;border-bottom:1px solid var(--line)}
 th{color:var(--muted);font-weight:600}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
 .swatch{display:inline-block;width:.7rem;height:.7rem;border-radius:2px;margin-right:.4rem;vertical-align:middle}
+.lb-flag{display:inline-block;width:1.1rem;height:1.1rem;object-fit:cover;border-radius:3px;margin-right:.4rem;vertical-align:middle;box-shadow:0 1px 2px rgba(0,0,0,.25)}
 .player-link{cursor:pointer;text-decoration:underline dotted}
 
 .rec{display:flex;justify-content:space-between;padding:.3rem .1rem;border-bottom:1px solid var(--line);font-size:.85rem}

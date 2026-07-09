@@ -39,6 +39,7 @@ class ReplayResult:
     guards: list[Guard] = field(default_factory=list)
     max_owned: dict[int, int] = field(default_factory=dict)          # user -> max comuni insieme
     max_owned_by_country: dict[str, dict[int, int]] = field(default_factory=dict)  # country -> user -> max
+    max_states: dict[int, int] = field(default_factory=dict)         # user -> max stati owner-aggregato insieme
 
 
 def _leader(owner_by_t: dict[int, int]) -> int | None:
@@ -109,5 +110,21 @@ def replay_flips(flips: list[dict], territory_country: dict[int, str | None],
             )
             for u, c in sub.items():
                 bump(res.max_owned_by_country[country], u, c)
+
+        # stati posseduti in contemporanea: owner-aggregato di un paese = chi vi
+        # controlla più comuni in modo STRETTO (logica A, un livello sopra).
+        by_country: dict[str, Counter] = {}
+        for tt, u in owner_by_t.items():
+            cc = territory_country.get(tt)
+            if cc:
+                by_country.setdefault(cc, Counter())[u] += 1
+        states_owned: Counter = Counter()
+        for tally in by_country.values():
+            top = max(tally.values())
+            leaders = [u for u, c in tally.items() if c == top]
+            if len(leaders) == 1:
+                states_owned[leaders[0]] += 1
+        for u, c in states_owned.items():
+            bump(res.max_states, u, c)
 
     return res

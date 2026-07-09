@@ -119,6 +119,7 @@ CREATE TABLE achievements (
     description  TEXT,
     type         TEXT    NOT NULL CHECK (type IN ('one_shot', 'repeatable')),
     icon_ref     TEXT,
+    secret       INTEGER NOT NULL DEFAULT 0,   -- nascosto dalla legenda (assegnato comunque)
     active       INTEGER NOT NULL DEFAULT 1
 );
 

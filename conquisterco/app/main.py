@@ -71,6 +71,10 @@ def _migrate(conn) -> None:
     if "provisional" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN provisional INTEGER NOT NULL DEFAULT 0")
         conn.commit()
+    ach_cols = {r["name"] for r in conn.execute("PRAGMA table_info(achievements)")}
+    if "secret" not in ach_cols:
+        conn.execute("ALTER TABLE achievements ADD COLUMN secret INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
     conn.execute("""CREATE TABLE IF NOT EXISTS tg_link_tokens (
         token TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
         created_at TEXT NOT NULL DEFAULT (datetime('now')))""")

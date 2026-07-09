@@ -106,7 +106,50 @@ Set iniziale:
 
 Il set crescerà: l'architettura è progettata per aggiunte a basso costo.
 
+### Espansione (luglio 2026)
+
+Aggiunti 30 badge pubblici. La canonicalizzazione nazioni/regioni sta in
+`geonames.py` (i nomi reali sono in lingua nativa: `Italia`, `Deutschland`,
+`Schweiz/Suisse/Svizzera/Svizra`…), così le regole ragionano su codici ISO-2.
+
+**Calendario / ora** (`turno_notte` 00–05, `alba_regno` 05–07, `natale_fecale`
+25/12, `anno_bisesto` 29/02, `capodanno` prima cacca dell'anno, `ultima_chiamata`
+ultima dell'anno). **Assiduità** (`orologio` streak 7, `metronomo` streak 30,
+`pilastro` 50 giorni totali). **Selfie** (`gallerista` 50, `archivista` 100,
+`museo_orrori` 200). **Luoghi** (`checkpoint_charlie` Berlino, `uranus`
+Missouri, `middelfart` DK, `cavaliere_oscuro` Batman TR, `hell_and_back`,
+`meta_cacca` nome scatologico, `d_day` Normandia, `vendicatore_fiume` Rijeka).
+**Coordinate** (`precisino` incrocio meridiano×parallelo, `ultima_thule` oltre il
+Circolo Polare Artico, `titicacca` presso il lago). **Sequenza** (`anschluss`
+DE→AT stesso giorno). **Possesso** (`granduca_colon` ≥25 comuni insieme,
+`colonialista_anale`/`imperialista_anale` owner-aggregato di ≥2/≥4 stati insieme).
+**Flip nel tempo** (`campagna_elettorale` ≥3 cacate/settimana che strappano il
+comune, `vendetta_fredda` riconquista dopo ≥30g, `avignone` Roma→persa→Avignone).
+
+Soglie e finestre in `config.py`.
+
+### Badge segreti
+
+Presenti nel motore e assegnati come gli altri, ma **nascosti dalla legenda** del
+modale (colonna `secret` in `achievements`; restano visibili sul profilo di chi li
+prende). Documentati qui e basta — la sorpresa è il punto.
+
+| Code | Nome | Regola |
+|---|---|---|
+| `pellegrino` | **Il Pellegrino** | cacca in Vaticano |
+| `serenissima` | **Serenissima Deposizione** | prima cacca a Venezia |
+| `danzica_libera` | **Danzica Libera** | prima cacca a Gdańsk |
+| `sudetenland` | **Sudetenland** | DE poi CZ lo stesso giorno |
+| `barbarossa` | **Operazione Barbarossa** | DE poi RU entro 5 giorni |
+| `fuck_brexit` | **Fuck Brexit** | UE → UK → UE entro 5 giorni |
+| `neutralita_armata` | **Neutralità Armata** | CH dopo aver cacato in IT/DE/FR/AT |
+| `cortina_igienica` | **La Cortina di Carta Igienica** | ex-Ovest & ex-Est entro 5 giorni |
+| `incontro_teano` | **Incontro di Te-ano** | due giocatori stesso giorno stesso comune → conteso |
+
 ### Backlog badge — livelli amministrativi (futuri)
+
+> Nota: `colonialista_anale` / `imperialista_anale` già coprono il **possesso di
+> stati** (owner-aggregato). Restano i livelli intermedi.
 
 Quando la mappa avrà gli aggregati (stato → regione → provincia, vedi §7), la
 stessa logica abilita badge di livello superiore. Da valutare, non ancora
@@ -116,7 +159,6 @@ implementati:
 - **Viceré** — possiedi un'intera regione.
 - **Re della Padania** / titoli regionali — sei owner (per comuni controllati)
   di una regione-simbolo.
-- **Anschluss** — diventi owner-aggregato di un intero stato.
 - **Guerra dei cent'anni** — strappi una regione al suo owner-aggregato
   precedente (flip a livello regione).
 - **Cordone sanitario** — possiedi tutte le province confinanti con una che non
