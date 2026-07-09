@@ -133,6 +133,17 @@ CREATE TABLE awards (
 );
 
 CREATE INDEX idx_awards_user ON awards(user_id);
+
+-- Assegnazioni MANUALI ("lo assegna il Sistema"): non derivano dai depositi e
+-- NON vengono azzerate dal finalize. Le regole-badge manuali le rileggono da qui
+-- e le trasformano in `awards`, così sopravvivono ai ricalcoli.
+CREATE TABLE manual_awards (
+    user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code     TEXT    NOT NULL,
+    ts       TEXT    NOT NULL,
+    context  TEXT,
+    PRIMARY KEY (user_id, code)
+);
 -- one-shot: un solo award per (achievement, utente). Ripetibili: gestiti in codice
 -- differenziando via context; questo indice resta parziale sui one-shot lato app.
 

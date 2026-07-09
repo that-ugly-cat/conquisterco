@@ -115,6 +115,12 @@ class EvalContext:
             self.flips, self.territory_country, track_countries=("PL",),
         )
 
+        # assegnazioni manuali del "Sistema" (persistenti, non derivate dai dump)
+        self.manual_awards = [
+            {"user_id": r["user_id"], "code": r["code"], "ts": r["ts"], "context": r["context"]}
+            for r in conn.execute("SELECT user_id, code, ts, context FROM manual_awards")
+        ]
+
     def tname(self, osm_id: int) -> str:
         meta = self.territory.get(osm_id)
         return meta["name"] if meta else str(osm_id)
@@ -720,6 +726,17 @@ def _avignone(ctx: EvalContext) -> list[Award]:
             state[nw] = 3
             out.append(Award("avignone", nw, f["ts"], "Roma → Avignone"))
     return out
+
+
+# ---------------------------------------------------------------------------
+# Badge MANUALI (assegnati dal "Sistema" via tabella manual_awards, non derivati)
+# ---------------------------------------------------------------------------
+
+@achievement("gatto_sul_cesso", "Gatto sul Cesso",
+             "Solo per gatti molto speciali. Lo assegna il Sistema.", type="one_shot", icon="🐱")
+def _gatto_sul_cesso(ctx: EvalContext) -> list[Award]:
+    return [Award("gatto_sul_cesso", m["user_id"], m["ts"], m["context"])
+            for m in ctx.manual_awards if m["code"] == "gatto_sul_cesso"]
 
 
 # ---------------------------------------------------------------------------

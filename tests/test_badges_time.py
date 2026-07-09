@@ -134,6 +134,22 @@ def test_badge_ripetibili_una_volta_e_segreti_doppi(conn, geo):
     assert _score(0, 0, (nb_b, sb_b)) == config.SCORE_PT_BADGE * (nb_b + config.SCORE_SECRET_MULT * sb_b)
 
 
+def test_gatto_sul_cesso_manuale_sopravvive_al_finalize(conn, geo):
+    """Badge assegnato dal Sistema via manual_awards: scatta e NON viene azzerato
+    dal finalize (le regole lo ri-derivano dalla tabella persistente)."""
+    from conquisterco.ingest import add_user
+    a = add_user(conn, "Tiglia")
+    dep(conn, a, 1012, "2025-01-18 10:34:00")
+    conn.execute("INSERT INTO manual_awards (user_id, code, ts, context) VALUES (?, 'gatto_sul_cesso', ?, ?)",
+                 (a, "2025-01-18 10:34:00", "colta sul fatto"))
+    conn.commit()
+    assert "gatto_sul_cesso" in _codes(conn, geo).get(a, set())   # run_all fa anche finalize
+    # verifica che sia PERSISTITO negli awards (sopravvissuto al DELETE/re-insert)
+    awarded = {r["code"] for r in conn.execute(
+        "SELECT a.code FROM awards w JOIN achievements a ON a.id=w.achievement_id WHERE w.user_id=?", (a,))}
+    assert "gatto_sul_cesso" in awarded
+
+
 def test_segreti_nascosti_dalla_legenda_ma_assegnati(conn, geo):
     """Un badge segreto scatta e finisce negli award, ma NON compare nella
     legenda pubblica del modale."""

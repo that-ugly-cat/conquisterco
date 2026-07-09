@@ -75,6 +75,11 @@ def _migrate(conn) -> None:
     if "secret" not in ach_cols:
         conn.execute("ALTER TABLE achievements ADD COLUMN secret INTEGER NOT NULL DEFAULT 0")
         conn.commit()
+    conn.execute("""CREATE TABLE IF NOT EXISTS manual_awards (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        code TEXT NOT NULL, ts TEXT NOT NULL, context TEXT,
+        PRIMARY KEY (user_id, code))""")
+    conn.commit()
     conn.execute("""CREATE TABLE IF NOT EXISTS tg_link_tokens (
         token TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
         created_at TEXT NOT NULL DEFAULT (datetime('now')))""")
