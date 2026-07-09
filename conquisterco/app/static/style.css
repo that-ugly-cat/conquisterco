@@ -144,3 +144,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .badge-desc{font-size:.8rem;color:var(--muted);margin-top:.1rem}
 .badge-holders{font-size:.7rem;color:var(--accent);margin-left:.4rem}
 .close{float:right;cursor:pointer;color:var(--muted);font-size:1.3rem;line-height:1}
+.modal2{z-index:1100}
+.badge-holders.link{cursor:pointer;text-decoration:underline dotted}
+.holder-row{padding:.15rem 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.holder-row:last-child{border-bottom:0}

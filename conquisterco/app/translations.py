@@ -65,6 +65,8 @@ TRANSLATIONS = {
         "badge_hint": "Come si sbloccano i badge. Il ? sulla mappa è un territorio conteso (parità): vale zero finché nessuno supera.",
         "holders_some": "l'hanno preso",
         "holders_none": "nessuno ancora",
+        "bh_title": "Chi l'ha preso",
+        "bi_howto": "Come si prende:",
         "legend_title": "Significato dei badge",
         "badges_what": "cosa sono?",
         # record (superlativi)
@@ -266,6 +268,8 @@ TRANSLATIONS = {
         "badge_hint": "How badges are unlocked. The ? on the map is a contested area (a tie): worth zero until someone pulls ahead.",
         "holders_some": "have it",
         "holders_none": "nobody yet",
+        "bh_title": "Who has it",
+        "bi_howto": "How to earn it:",
         "legend_title": "What the badges mean",
         "badges_what": "what are these?",
         "rec_nord": "Furthest North", "rec_sud": "Furthest South",

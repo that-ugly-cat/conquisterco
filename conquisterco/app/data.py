@@ -539,7 +539,7 @@ def territory_detail(conn: sqlite3.Connection, osm_id: int) -> dict:
     }
 
 
-def profile(conn: sqlite3.Connection, user_id: int) -> dict | None:
+def profile(conn: sqlite3.Connection, user_id: int, t: dict | None = None) -> dict | None:
     u = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
     if u is None:
         return None
@@ -548,8 +548,10 @@ def profile(conn: sqlite3.Connection, user_id: int) -> dict | None:
            FROM territory_ownership o JOIN territories t ON t.osm_id=o.territory_osm_id
            WHERE o.owner_user_id=? ORDER BY t.name""", (user_id,)
     ).fetchall()
+    # nome/descrizione tradotti per codice (il modale "come si prende" riusa il testo)
     badges = conn.execute(
-        """SELECT a.name AS name, a.icon_ref AS icon, COUNT(*) AS c
+        """SELECT a.code AS code, a.name AS name, a.description AS descr,
+                  a.icon_ref AS icon, COUNT(*) AS c
            FROM awards w JOIN achievements a ON a.id=w.achievement_id
            WHERE w.user_id=? GROUP BY a.id ORDER BY a.name""", (user_id,)
     ).fetchall()
@@ -558,5 +560,22 @@ def profile(conn: sqlite3.Connection, user_id: int) -> dict | None:
         "comuni": len(owned),
         "km2": round(sum(o["area"] or 0 for o in owned), 1),
         "territories": [{"name": o["name"], "country": o["country"]} for o in owned],
-        "badges": [{"name": b["name"], "icon": b["icon"], "count": b["c"]} for b in badges],
+        "badges": [{
+            "code": b["code"], "icon": b["icon"], "count": b["c"],
+            "name": (t.get(f"ach_{b['code']}", b["name"]) if t else b["name"]),
+            "description": (t.get(f"ach_{b['code']}_d", b["descr"]) if t else b["descr"]),
+        } for b in badges],
     }
+
+
+def badge_holders(conn: sqlite3.Connection, code: str) -> list[dict]:
+    """Utenti che hanno un badge (nome pubblico + quante volte), per il modale
+    'chi l'ha preso' della legenda. Pubblico come la classifica."""
+    return [
+        {"name": r["name"], "count": r["c"]}
+        for r in conn.execute(
+            """SELECT COALESCE(u.public_name, u.display_name) AS name, COUNT(*) AS c
+               FROM awards w JOIN achievements a ON a.id = w.achievement_id
+               JOIN users u ON u.id = w.user_id
+               WHERE a.code = ? GROUP BY u.id ORDER BY c DESC, name""", (code,))
+    ]

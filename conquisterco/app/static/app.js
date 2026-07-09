@@ -184,12 +184,16 @@ async function loadPanels() {
   ).join("");
 
   const badges = await fetch("/api/achievements").then((r) => r.json());
+  window.BADGE = {};
+  badges.forEach((b) => { window.BADGE[b.code] = b; });
   $("#tab-badge").innerHTML =
     `<p class="hint">${T.badge_hint}</p>`
     + badges.map((b) =>
         `<div class="badge-row"><div class="badge-ic">${b.icon || "🏅"}</div>`
         + `<div><b>${esc(b.name)}</b>`
-        + `<span class="badge-holders">${b.holders ? "· " + b.holders + " " + T.holders_some : "· " + T.holders_none}</span>`
+        + (b.holders
+            ? `<span class="badge-holders link" onclick="showBadgeHolders('${b.code}')">· ${b.holders} ${T.holders_some}</span>`
+            : `<span class="badge-holders">· ${T.holders_none}</span>`)
         + `<div class="badge-desc">${esc(b.description || "")}</div></div></div>`
       ).join("");
 }
@@ -216,7 +220,12 @@ window.showTerritory = async (osm) => {
 // ---- Profilo -------------------------------------------------------------
 window.showProfile = async (uid) => {
   const p = await fetch("/api/profile/" + uid).then((r) => r.json());
-  const badges = p.badges.map((b) => `${b.icon || "🏅"} ${esc(b.name)}${b.count > 1 ? " ×" + b.count : ""}`).join("<br>");
+  window.BADGEINFO = {};
+  const badges = p.badges.map((b) => {
+    window.BADGEINFO[b.code] = b;
+    const label = `${b.icon || "🏅"} ${esc(b.name)}${b.count > 1 ? " ×" + b.count : ""}`;
+    return `<span class="player-link" onclick="showBadgeInfo('${b.code}')">${label}</span>`;
+  }).join("<br>");
   const terr = p.territories.map((t) => esc(t.name)).join(", ") || "—";
   $("#modal .modal-box").innerHTML =
     `<span class="close" onclick="closeModal()">×</span>`
@@ -229,6 +238,34 @@ window.showProfile = async (uid) => {
 };
 window.closeModal = () => $("#modal").classList.add("hidden");
 $("#modal").onclick = (e) => { if (e.target.id === "modal") closeModal(); };
+
+// ---- Modale secondario (chi ha il badge / come si prende) ----------------
+function openModal2(title, body) {
+  $("#modal2 .modal-box").innerHTML =
+    `<span class="close" onclick="closeModal2()">×</span><h2>${title}</h2>${body}`;
+  $("#modal2").classList.remove("hidden");
+}
+window.closeModal2 = () => $("#modal2").classList.add("hidden");
+$("#modal2").onclick = (e) => { if (e.target.id === "modal2") closeModal2(); };
+
+// legenda: "· N l'hanno preso" → elenco degli utenti col badge
+window.showBadgeHolders = async (code) => {
+  const b = (window.BADGE || {})[code] || {};
+  const rows = await fetch(`/api/badge/${code}/holders`).then((r) => r.json());
+  const list = rows.length
+    ? rows.map((h) => `<div class="holder-row">${esc(h.name)}${h.count > 1 ? " ×" + h.count : ""}</div>`).join("")
+    : `<i>${T.holders_none}</i>`;
+  openModal2(`${b.icon || "🏅"} ${esc(b.name || code)}`, list);
+};
+
+// profilo: nome badge → come si prende (stesso testo della legenda)
+window.showBadgeInfo = (code) => {
+  const b = (window.BADGEINFO || {})[code];
+  if (!b) return;
+  const body = `<p class="muted" style="margin:.2rem 0 .5rem">${T.bi_howto}</p>`
+    + `<p>${esc(b.description || "")}</p>`;
+  openModal2(`${b.icon || "🏅"} ${esc(b.name)}`, body);
+};
 
 // ---- Boot ----------------------------------------------------------------
 loadAreas(true);

@@ -63,6 +63,24 @@ def test_streak_e_selfie(conn, geo):
     assert "archivista" not in c   # servono 100 selfie
 
 
+def test_badge_holders_e_descrizione_profilo(conn, geo):
+    from conquisterco.ingest import add_user
+    a = add_user(conn, "A")
+    b = add_user(conn, "B")
+    dep(conn, a, 1012, "2026-04-01 10:00:00")   # A colonizza Roma
+    dep(conn, b, 1001, "2026-04-01 10:00:00")   # B colonizza Aosta
+    run_all(conn, geo)
+
+    holders = {h["name"] for h in data.badge_holders(conn, "colonizzatore")}
+    assert {"A", "B"} <= holders
+
+    # profilo: ogni badge porta code + descrizione (tradotta col dict fornito)
+    prof = data.profile(conn, a, {"ach_colonizzatore_d": "testo come-si-prende"})
+    byc = {x["code"]: x for x in prof["badges"]}
+    assert "colonizzatore" in byc
+    assert byc["colonizzatore"]["description"] == "testo come-si-prende"
+
+
 def test_segreti_nascosti_dalla_legenda_ma_assegnati(conn, geo):
     """Un badge segreto scatta e finisce negli award, ma NON compare nella
     legenda pubblica del modale."""

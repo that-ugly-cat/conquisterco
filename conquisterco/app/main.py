@@ -207,14 +207,19 @@ def api_achievements(request: Request, conn=Depends(get_db)):
     return data.achievements(conn, get_t(request))
 
 
+@app.get("/api/badge/{code}/holders")
+def api_badge_holders(code: str, conn=Depends(get_db)):
+    return data.badge_holders(conn, code)
+
+
 @app.get("/api/territory/{osm_id}")
 def api_territory(osm_id: int, conn=Depends(get_db)):
     return data.territory_detail(conn, osm_id)
 
 
 @app.get("/api/profile/{user_id}")
-def api_profile(user_id: int, conn=Depends(get_db)):
-    p = data.profile(conn, user_id)
+def api_profile(user_id: int, request: Request, conn=Depends(get_db)):
+    p = data.profile(conn, user_id, get_t(request))
     if p is None:
         raise HTTPException(status_code=404, detail="giocatore non trovato")
     return p
