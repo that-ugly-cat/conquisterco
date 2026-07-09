@@ -62,6 +62,8 @@ TRANSLATIONS = {
         "gallery": "Galleria",
         "gallery_view": "galleria →",
         "gallery_empty": "Ancora nessuna cacata.",
+        "gal_n": "Cacata n°",
+        "gal_on_map": "Vedi sulla mappa",
         # legenda badge
         "badge_hint": "Come si sbloccano i badge. Il ? sulla mappa è un territorio conteso (parità): vale zero finché nessuno supera.",
         "holders_some": "l'hanno preso",
@@ -268,6 +270,8 @@ TRANSLATIONS = {
         "gallery": "Gallery",
         "gallery_view": "gallery →",
         "gallery_empty": "No dumps yet.",
+        "gal_n": "Dump #",
+        "gal_on_map": "See it on the map",
         "badge_hint": "How badges are unlocked. The ? on the map is a contested area (a tie): worth zero until someone pulls ahead.",
         "holders_some": "have it",
         "holders_none": "nobody yet",

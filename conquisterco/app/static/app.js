@@ -12,6 +12,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 const areaLayer = L.layerGroup().addTo(map);
 const flagLayer = L.layerGroup().addTo(map);
 const dumpLayer = L.layerGroup();
+let dumpMarkers = {};   // deposit_id → marker (per il deep-link ?dump=<id>)
 let mode = "territori";
 
 const $ = (s) => document.querySelector(s);
@@ -101,10 +102,12 @@ async function loadDumps() {
   if (!res.ok) return;
   const rows = await res.json();
   dumpLayer.clearLayers();
+  dumpMarkers = {};
   for (const d of rows) {
     const m = L.marker([d.lat, d.lon], {
       icon: L.divIcon({ className: "dump-pin", html: "💩", iconSize: [20, 20] }),
     });
+    dumpMarkers[d.id] = m;
     const selfie = d.has_photo
       ? `<img class="selfie-img" src="/api/selfie/${d.id}" alt="selfie"
              onerror="this.outerHTML='&lt;div class=&quot;selfie&quot;&gt;🐰&lt;/div&gt;'">`
@@ -267,7 +270,19 @@ window.showBadgeInfo = (code) => {
   openModal2(`${b.icon || "🏅"} ${esc(b.name)}`, body);
 };
 
+// ---- Deep-link a un dump specifico (?dump=<id>, dalla galleria) ----------
+function focusDump(id) {
+  const m = dumpMarkers[id];
+  if (!m) return;
+  setMode("dump");
+  map.setView(m.getLatLng(), 16);
+  m.openPopup();
+}
+
 // ---- Boot ----------------------------------------------------------------
 loadAreas(true);
-loadDumps();
 loadPanels();
+const _dumpParam = new URLSearchParams(location.search).get("dump");
+loadDumps().then(() => {
+  if (_dumpParam && window.LOGGED) focusDump(parseInt(_dumpParam, 10));
+});

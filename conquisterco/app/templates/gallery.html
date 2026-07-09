@@ -27,15 +27,65 @@
     {% if g.dumps %}
     <div class="gallery-grid">
       {% for d in g.dumps %}
-      <a class="gcell" {% if d.has_photo %}href="/api/selfie/{{ d.id }}" target="_blank"{% endif %}>
-        {% if d.has_photo %}<img loading="lazy" src="/api/selfie/{{ d.id }}" alt="">{% else %}<div class="grab">🐰</div>{% endif %}
-        <div class="gcap">{{ d.ts[:10] }} · {{ d.comune or '?' }}</div>
-      </a>
+      <div class="gcell" onclick="openDump({{ loop.index0 }})">
+        {% if d.has_photo and d.is_video %}
+          <video class="gthumb" src="/api/selfie/{{ d.id }}#t=0.1" preload="metadata" muted></video>
+          <span class="vbadge">▶</span>
+        {% elif d.has_photo %}
+          <img loading="lazy" src="/api/selfie/{{ d.id }}" alt="">
+        {% else %}
+          <div class="grab">🐰</div>
+        {% endif %}
+        <div class="gcap">#{{ d.n }} · {{ d.ts[:10] }} · {{ d.comune or '?' }}</div>
+      </div>
       {% endfor %}
     </div>
     {% else %}
     <p class="muted">{{ T.gallery_empty }}</p>
     {% endif %}
   </div>
+
+  <div id="gmodal" class="modal hidden">
+    <div class="modal-box">
+      <span class="close" onclick="closeGModal()">×</span>
+      <div id="gm-media" class="gm-media"></div>
+      <h3 id="gm-title" style="margin:.7rem 0 .2rem"></h3>
+      <div id="gm-meta" class="muted"></div>
+      <a id="gm-map" href="#" class="gm-mapbtn">🗺️ {{ T.gal_on_map }}</a>
+    </div>
+  </div>
+
+  <script>
+    window.DUMPS = {{ g.dumps | tojson }};
+    const L = { n: {{ T.gal_n | tojson }}, alt: {{ T.altitude | tojson }} };
+    function openDump(i) {
+      const d = window.DUMPS[i];
+      const media = document.getElementById("gm-media");
+      media.innerHTML = "";
+      if (d.has_photo && d.is_video) {
+        const v = document.createElement("video");
+        v.src = "/api/selfie/" + d.id; v.controls = true; v.autoplay = true; v.playsInline = true;
+        media.appendChild(v);
+      } else if (d.has_photo) {
+        const img = document.createElement("img");
+        img.src = "/api/selfie/" + d.id; media.appendChild(img);
+      } else {
+        media.innerHTML = '<div class="gm-rabbit">🐰</div>';
+      }
+      document.getElementById("gm-title").textContent = (d.comune || "?") + " · " + d.ts.slice(0, 10);
+      const alt = d.altitude != null ? Math.round(d.altitude) + " m" : "?";
+      document.getElementById("gm-meta").textContent =
+        L.n + " " + d.n + " · " + d.ts.slice(11, 16) + " · " + L.alt + " " + alt;
+      document.getElementById("gm-map").href = "/?dump=" + d.id;
+      document.getElementById("gmodal").classList.remove("hidden");
+    }
+    function closeGModal() {
+      document.getElementById("gmodal").classList.add("hidden");
+      document.getElementById("gm-media").innerHTML = "";   // ferma l'eventuale video
+    }
+    document.getElementById("gmodal").addEventListener("click", (e) => {
+      if (e.target.id === "gmodal") closeGModal();
+    });
+  </script>
 </body>
 </html>

@@ -433,16 +433,26 @@ def delete_user(conn: sqlite3.Connection, uid: int, media_dir) -> None:
             p.unlink()
 
 
+_VIDEO_EXT = {"mp4", "mov", "webm", "mkv", "avi", "3gp", "m4v", "ogv"}
+
+
+def _is_video(ref: str | None) -> bool:
+    return bool(ref) and "." in ref and ref.rsplit(".", 1)[-1].lower() in _VIDEO_EXT
+
+
 def gallery(conn: sqlite3.Connection, user_id: int, limit: int = 1000) -> dict | None:
-    """Cacate di un utente in ordine temporale (più recenti prima)."""
+    """Cacate di un utente in ordine temporale (più recenti prima). `n` è il
+    numero progressivo cronologico (1 = la prima in assoluto)."""
     u = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
     if u is None:
         return None
     dumps = [
         {"id": r["id"], "ts": r["ts"], "has_photo": r["photo_ref"] is not None,
-         "comune": r["cname"]}
+         "is_video": _is_video(r["photo_ref"]), "comune": r["cname"],
+         "n": r["n"], "altitude": r["altitude"], "lat": r["lat"], "lon": r["lon"]}
         for r in conn.execute(
-            """SELECT d.id, d.ts, d.photo_ref, t.name AS cname
+            """SELECT d.id, d.ts, d.photo_ref, d.altitude, d.lat, d.lon, t.name AS cname,
+                      ROW_NUMBER() OVER (ORDER BY d.ts, d.id) AS n
                FROM deposits d LEFT JOIN territories t ON t.osm_id = d.territory_osm_id
                WHERE d.user_id=? ORDER BY d.ts DESC LIMIT ?""", (user_id, limit))
     ]
