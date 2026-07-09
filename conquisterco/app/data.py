@@ -325,8 +325,12 @@ def my_stats(conn: sqlite3.Connection, uid: int, t: dict | None = None) -> dict 
         return None
     prof = profile(conn, uid, t)  # comuni, km2, territories, badges (code + descr tradotta)
 
-    lb = main_leaderboard(conn)
-    rank = next((i + 1 for i, r in enumerate(lb) if r["user_id"] == uid), None)
+    lb = main_leaderboard(conn)   # ordinata per punteggio → rank e score coerenti
+    rank, score = None, 0
+    for i, r in enumerate(lb):
+        if r["user_id"] == uid:
+            rank, score = i + 1, r["score"]
+            break
 
     c = conn.execute(
         """SELECT COUNT(*) tot, COUNT(DISTINCT d.territory_osm_id) comuni,
@@ -345,7 +349,7 @@ def my_stats(conn: sqlite3.Connection, uid: int, t: dict | None = None) -> dict 
         "id": uid, "name": _pub(u), "username": u["display_name"],
         "public_name": u["public_name"], "color": u["color"],
         "has_flag": bool(u["flag_ref"]),
-        "rank": rank, "players": len(lb),
+        "rank": rank, "players": len(lb), "score": score,
         "comuni": prof["comuni"], "km2": prof["km2"],
         "deposits": c["tot"], "comuni_visitati": c["comuni"],
         "nazioni": c["nazioni"], "regioni": c["regioni"],

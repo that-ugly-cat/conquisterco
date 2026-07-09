@@ -54,7 +54,7 @@ TRIP_WINDOW_DAYS = 5       # Fuck Brexit / Barbarossa / Cortina di carta igienic
 # così non schiaccia comuni e badge.
 SCORE_PT_COMUNE = 10.0     # punti per comune posseduto
 SCORE_PT_KM2 = 0.01        # punti per km² (→ 100 km² = 1 punto)
-SCORE_PT_BADGE = 20.0      # punti per badge distinto
+SCORE_PT_BADGE = 10.0      # punti per badge distinto
 SCORE_SECRET_MULT = 2      # i badge segreti valgono doppio
 
 # --- Riferimenti geografici ------------------------------------------------
