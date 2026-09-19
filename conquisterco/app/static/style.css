@@ -98,8 +98,6 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .wk-sep td{font-size:.68rem;color:var(--muted);font-style:italic;padding-top:.6rem;border-top:1px solid var(--line)}
 /* La tabella delle settimane ha una colonna in piu' delle altre e sta nella
    stessa aside da 360px: senza questo il nome va a capo sotto la bandierina. */
-#tab-settimane table{font-size:.78rem}
-#tab-settimane td,#tab-settimane th{padding:.28rem .2rem}
 #tab-settimane .wk-name{white-space:nowrap}
 #tab-settimane .swatch{margin-right:.25rem}
 #tab-settimane .lb-flag{width:.95rem;height:.95rem;margin-right:.25rem}
@@ -136,6 +134,15 @@ aside{width:360px;background:var(--paper);border-left:1px solid var(--line);over
 .tab{display:none}
 .tab.active{display:block}
 
+/* Corpo omogeneo in tutta la barra laterale. Prima ogni tab aveva il suo:
+   tabelle .85, record .85, feed .83, e il tab Badge nemmeno uno — quindi
+   ereditava 1rem ed era vistosamente piu' grande degli altri. Qui si fissa una
+   volta e si eredita; restano piu' piccoli solo i testi deliberatamente
+   secondari (timestamp, descrizioni, quanti hanno preso un badge). */
+aside .tab{font-size:.78rem}
+aside .tab table{font-size:inherit}
+aside .tab th,aside .tab td{padding:.28rem .2rem}
+
 table{width:100%;border-collapse:collapse;font-size:.85rem}
 th,td{text-align:left;padding:.35rem .3rem;border-bottom:1px solid var(--line)}
 th{color:var(--muted);font-weight:600}
@@ -144,9 +151,9 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .lb-flag{display:inline-block;width:1.1rem;height:1.1rem;object-fit:cover;border-radius:3px;margin-right:.4rem;vertical-align:middle;box-shadow:0 1px 2px rgba(0,0,0,.25)}
 .player-link{cursor:pointer;text-decoration:underline dotted}
 
-.rec{display:flex;justify-content:space-between;padding:.3rem .1rem;border-bottom:1px solid var(--line);font-size:.85rem}
+.rec{display:flex;justify-content:space-between;padding:.3rem .1rem;border-bottom:1px solid var(--line)}
 .rec .lab{color:var(--muted)}
-.feed-item{padding:.35rem .1rem;border-bottom:1px solid var(--line);font-size:.83rem}
+.feed-item{padding:.35rem .1rem;border-bottom:1px solid var(--line)}
 .feed-item .ts{color:var(--muted);font-size:.72rem;margin-right:.4rem}
 .feed-item.steal{color:var(--accent)}
 .feed-item.contested{color:var(--muted)}
@@ -169,7 +176,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .hint{font-size:.78rem;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:6px;padding:.5rem;margin:.1rem 0 .6rem}
 .badge-row{display:flex;gap:.55rem;padding:.4rem .1rem;border-bottom:1px solid var(--line)}
 .badge-ic{font-size:1.3rem;width:1.6rem;text-align:center;flex-shrink:0}
-.badge-desc{font-size:.8rem;color:var(--muted);margin-top:.1rem}
+.badge-desc{font-size:.72rem;color:var(--muted);margin-top:.1rem}
 .badge-holders{font-size:.7rem;color:var(--accent);margin-left:.4rem}
 .close{float:right;cursor:pointer;color:var(--muted);font-size:1.3rem;line-height:1}
 .modal2{z-index:1100}
