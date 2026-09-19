@@ -185,7 +185,10 @@ async function loadPanels() {
   // settimane vinte: il rateo da solo mente (una su una fa 1.00), quindi
   // "giocate" sta sempre in tabella accanto.
   const wk = await fetch("/api/weeks").then((r) => r.json());
-  if (wk.leaderboard.length) {
+  if (!wk.leaderboard.length) {
+    // niente settimane chiuse: dirlo, invece di lasciare il pannello bianco
+    $("#tab-settimane").innerHTML = `<p class="muted">${esc(T.weeks_empty)}</p>`;
+  } else {
     let w = `<table><tr><th>${T.th_num}</th><th>${T.th_player}</th>`
       + `<th class='num'>${T.weeks_ratio}</th><th class='num'>${T.weeks_won}</th>`
       + `<th class='num'>${T.weeks_played}</th></tr>`;

@@ -199,3 +199,36 @@ def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch):
     assert conn.execute(
         "SELECT face_deposit_id FROM weeks WHERE id=?", (aperta["id"],)
     ).fetchone()["face_deposit_id"] == dbid
+
+
+def test_avvio_dell_app_chiude_lo_storico(conn, geo, tmp_path, monkeypatch):
+    """Dopo un aggiornamento la tabella `weeks` e' vuota, e la classifica
+    sembrerebbe rotta fino al recap della domenica. L'avvio dell'app chiude
+    quello che e' gia' finito: lo storico e' derivabile subito."""
+    import importlib
+
+    db = tmp_path / "prova.db"
+    monkeypatch.setenv("CONQUISTERCO_DB", str(db))
+    monkeypatch.setenv("CONQUISTERCO_MEDIA", str(tmp_path / "media"))
+    monkeypatch.setenv("CONQUISTERCO_SECRET", "test")
+    monkeypatch.setenv("CONQUISTERCO_DEMO", "0")
+
+    from conquisterco.db import connect, init_db
+    c = connect(str(db))
+    init_db(c)
+    a = add_user(c, "A")
+    now = datetime.now()
+    for w in (4, 3, 2):
+        dep(c, a, 1012, _ts(now - timedelta(weeks=w)))
+    run_all(c, geo)
+    assert c.execute("SELECT COUNT(*) FROM weeks").fetchone()[0] == 0
+    c.close()
+
+    from conquisterco.app import main
+    importlib.reload(main)          # rilegge i path dall'ambiente e chiama ensure_db()
+
+    c = connect(str(db))
+    assert c.execute("SELECT COUNT(*) FROM weeks").fetchone()[0] >= 3
+    # la settimana in corso NON e' fra quelle: la chiude solo il recap
+    assert c.execute("SELECT MAX(end_ts) FROM weeks").fetchone()[0] < _ts(now)
+    c.close()

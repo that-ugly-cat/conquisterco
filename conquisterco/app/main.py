@@ -132,6 +132,14 @@ def ensure_db() -> None:
             users = build_world(conn)
             seed_deposits(conn, users)
             run_all(conn, FakeGeocoder())
+        # Le settimane gia' finite si chiudono qui, non solo al recap della
+        # domenica: altrimenti dopo un aggiornamento la classifica «settimane
+        # vinte» resta VUOTA fino al primo recap utile, e una pagina vuota
+        # sembra rotta anche quando non lo e'. Lo storico e' derivabile subito,
+        # quindi si deriva subito. E' idempotente e costa un SELECT quando non
+        # c'e' niente da chiudere; la settimana IN CORSO resta al recap, che e'
+        # l'unico a chiuderla (vedi weeks.py).
+        weeks.close_due_weeks(conn)
     finally:
         conn.close()
 
