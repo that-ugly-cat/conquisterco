@@ -48,6 +48,9 @@ in alto, trasferta più lontana…), oltre 50 achievement, e una mappa coropleti
   "N l'hanno preso" apre chi ce l'ha, il nome-badge apre "come si prende". **Galleria**
   per utente: i selfie si aprono in un **modale** (foto o video) con comune, data,
   numero progressivo, quota e bottone "vedi sulla mappa".
+- **Visibilità dei selfie** a tre livelli: pubblici, **ristretti** (io, gli admin e una
+  lista che scelgo — e in cambio si esce dal voto della faccia di merda), oppure non
+  salvati affatto. Il controllo sta in un posto solo, perché un selfie esce da cinque.
 - **Profilo**: rank e punteggio, bacheca badge cliccabili, nome pubblico (≠ username),
   bandiera, handle Telegram, "non salvare i selfie", cancella-solo-selfie e cancella-tutto.
 - **Admin**: crea utenti, reset password, ruoli, **merge** account, **messaggi liberi
