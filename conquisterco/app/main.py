@@ -440,7 +440,8 @@ def me_delete(request: Request, conn=Depends(get_db)):
 def vote_page(request: Request, conn=Depends(get_db)):
     require_login(request)   # i selfie stanno dietro login, e il voto pure
     week = faces.open_vote_week(conn)
-    cands = faces.candidates(conn, week["id"], request.session["uid"]) if week else []
+    cands = (faces.candidates(conn, week["id"], request.session["uid"], MEDIA_DIR)
+             if week else [])
     return templates.TemplateResponse(request, "vote.html", _ctx(
         request, week=week, cands=cands, max_vote=config.FACE_MAX_VOTE,
         me=request.session.get("name"), admin=is_admin(request)))

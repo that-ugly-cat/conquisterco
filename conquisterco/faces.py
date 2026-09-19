@@ -17,6 +17,7 @@ più merda vince, e tre persone che ti danno 2 battono una che ne dà 5. Parita'
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 
 from . import config
 from .util import is_video
@@ -31,9 +32,15 @@ def open_vote_week(conn: sqlite3.Connection) -> dict | None:
     return dict(r) if r else None
 
 
-def candidates(conn: sqlite3.Connection, week_id: int, voter_id: int | None = None) -> list[dict]:
+def candidates(conn: sqlite3.Connection, week_id: int, voter_id: int | None = None,
+               media_dir=None) -> list[dict]:
     """I selfie in gara per una settimana, col voto di chi guarda. Solo i
-    depositi con foto o video: chi non ha caricato niente non e' in gara."""
+    depositi con foto o video: chi non ha caricato niente non e' in gara.
+
+    Con `media_dir` si scartano anche i `photo_ref` che puntano a un file che
+    non c'e'. Sulla produzione sono nove su 1252, e in galleria passano per
+    immagini rotte — ma qui diventerebbero riquadri grigi su cui si puo'
+    comunque votare, che e' peggio: un voto dato a niente."""
     w = conn.execute("SELECT start_ts, end_ts FROM weeks WHERE id=?", (week_id,)).fetchone()
     if w is None:
         return []
@@ -50,9 +57,14 @@ def candidates(conn: sqlite3.Connection, week_id: int, voter_id: int | None = No
            ORDER BY d.ts""",
         (week_id, voter_id, w["start_ts"], w["end_ts"])).fetchall()
     out = []
+    base = Path(media_dir).resolve() if media_dir else None
     for r in rows:
         if not config.FACE_SELF_VOTE and voter_id is not None and r["user_id"] == voter_id:
             continue      # i propri selfie non si votano: non compaiono proprio
+        if base is not None:
+            f = (base / r["photo_ref"]).resolve()
+            if not (str(f).startswith(str(base)) and f.exists()):
+                continue  # file sparito: fuori gara, non un riquadro grigio
         out.append({"id": r["id"], "ts": r["ts"], "author": r["author"],
                     "user_id": r["user_id"], "comune": r["comune"],
                     "is_video": is_video(r["photo_ref"]), "my_vote": r["my_vote"]})

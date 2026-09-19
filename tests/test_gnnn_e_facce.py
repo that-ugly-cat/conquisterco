@@ -147,3 +147,17 @@ def test_una_sola_settimana_aperta_al_voto(conn, geo):
     assert faces.open_vote_week(conn)["id"] == week["id"]
     faces.elect(conn, week["id"])
     assert faces.open_vote_week(conn) is None
+
+
+def test_selfie_con_file_sparito_e_fuori_gara(conn, geo, tmp_path):
+    """Un `photo_ref` che punta al nulla in galleria e' un'immagine rotta; qui
+    sarebbe un riquadro grigio votabile, cioe' un voto dato a niente."""
+    a, b, da, db, week = _settimana_con_selfie(conn, geo)
+    (tmp_path / "x.jpg").write_bytes(b"finta")   # esiste solo quella di `a`
+    conn.execute("UPDATE deposits SET photo_ref='sparito.jpg' WHERE id=?", (db,))
+    conn.commit()
+
+    senza_controllo = [c["id"] for c in faces.candidates(conn, week["id"], a)]
+    con_controllo = [c["id"] for c in faces.candidates(conn, week["id"], a, tmp_path)]
+    assert db in senza_controllo          # il DB non sa che il file non c'e'
+    assert db not in con_controllo        # il filesystem si'
