@@ -112,7 +112,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 
 main{display:flex;height:calc(100% - 52px)}
 #map{flex:1;height:100%}
-aside{width:360px;background:var(--paper);border-left:1px solid var(--line);overflow-y:auto;padding:.75rem}
+aside{width:360px;background:var(--paper);border-left:1px solid var(--line);overflow-y:auto;padding:.75rem;font-size:.78rem}
 
 /* mobile: mappa sopra, pannello sotto a tutta larghezza */
 @media(max-width:760px){
@@ -134,14 +134,15 @@ aside{width:360px;background:var(--paper);border-left:1px solid var(--line);over
 .tab{display:none}
 .tab.active{display:block}
 
-/* Corpo omogeneo in tutta la barra laterale. Prima ogni tab aveva il suo:
-   tabelle .85, record .85, feed .83, e il tab Badge nemmeno uno — quindi
-   ereditava 1rem ed era vistosamente piu' grande degli altri. Qui si fissa una
-   volta e si eredita; restano piu' piccoli solo i testi deliberatamente
-   secondari (timestamp, descrizioni, quanti hanno preso un badge). */
-aside .tab{font-size:.78rem}
-aside .tab table{font-size:inherit}
-aside .tab th,aside .tab td{padding:.28rem .2rem}
+/* Corpo omogeneo in tutta la barra laterale, fissato una volta su `aside` e
+   ereditato. Prima ogni tab aveva il suo (tabelle .85, record .85, feed .83) e
+   due blocchi non ne avevano nessuno — il tab Badge e il riquadro di dettaglio
+   del comune — quindi ereditavano 1rem ed erano vistosamente piu' grandi.
+   Restano piu' piccoli solo i testi deliberatamente secondari (timestamp,
+   descrizioni, quanti hanno preso un badge) e piu' grandi i bottoni delle tab,
+   che hanno una misura loro. */
+aside table{font-size:inherit}
+aside th,aside td{padding:.28rem .2rem}
 
 table{width:100%;border-collapse:collapse;font-size:.85rem}
 th,td{text-align:left;padding:.35rem .3rem;border-bottom:1px solid var(--line)}
