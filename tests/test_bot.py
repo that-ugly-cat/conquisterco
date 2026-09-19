@@ -156,7 +156,7 @@ def test_broadcast_disabilitato_se_bot_non_configurato(monkeypatch):
     monkeypatch.setattr(bot, "BOT_TOKEN", "")
     monkeypatch.setattr(bot, "ALLOWED_CHAT", None)
     assert bot.bot_enabled() is False
-    assert bot.broadcast("ciao") is False   # nessuna rete, ritorna subito
+    assert bot.broadcast("ciao") == (False, "bot non configurato")
 
 
 def test_broadcast_invia_al_gruppo(monkeypatch):
@@ -172,7 +172,7 @@ def test_broadcast_invia_al_gruppo(monkeypatch):
             return {"ok": True}
 
     c = C()
-    assert bot.broadcast("ciao a tutti", client=c) is True
+    assert bot.broadcast("ciao a tutti", client=c) == (True, "")
     assert c.calls[0][0] == "sendMessage"
     assert c.calls[0][1]["chat_id"] == "42"
     assert c.calls[0][1]["text"] == "ciao a tutti"
@@ -295,3 +295,62 @@ def test_solo_dal_gruppo_autorizzato(tmp_path):
         assert conn.execute("SELECT COUNT(*) FROM deposits").fetchone()[0] == 0
     finally:
         bot.ALLOWED_CHAT = old
+
+
+def test_lunghezza_telegram_conta_le_unita_non_i_caratteri():
+    """Una bandierina e' una coppia di indicatori regionali: quattro unita'
+    UTF-16, non una. Contare i caratteri sottostima, e su un annuncio pieno di
+    bandierine sottostima di centinaia."""
+    bandiera = chr(0x1F1EE) + chr(0x1F1F9)
+    assert len(bandiera) == 2
+    assert bot._lunghezza_tg(bandiera) == 4
+    assert bot._lunghezza_tg(chr(0x1F4A9)) == 2        # una cacca: due unita'
+    assert bot._lunghezza_tg("abc") == 3
+
+
+def test_spezza_per_telegram_taglia_dove_fa_meno_male():
+    corto = "una riga sola"
+    assert bot.spezza_per_telegram(corto) == [corto]
+
+    a_capo = chr(10)
+    par = ["paragrafo " + str(i) + " " + "x" * 400 for i in range(10)]
+    testo = (a_capo * 2).join(par)
+    pezzi = bot.spezza_per_telegram(testo, limite=1000)
+    assert len(pezzi) > 1
+    assert all(bot._lunghezza_tg(p) <= 1000 for p in pezzi)
+    # niente e' andato perduto e niente e' stato duplicato
+    assert "".join(pezzi).replace(a_capo, "") == testo.replace(a_capo, "")
+    # ha tagliato fra i paragrafi: nessun pezzo comincia a meta' di una parola
+    assert all(p.startswith("paragrafo") for p in pezzi)
+
+
+def test_spezza_per_telegram_regge_una_riga_sola_enorme():
+    """Ultima risorsa: se una riga da sola sfora, si taglia dentro."""
+    pezzi = bot.spezza_per_telegram("y" * 5000, limite=1000)
+    assert len(pezzi) == 5
+    assert all(bot._lunghezza_tg(p) <= 1000 for p in pezzi)
+    assert "".join(pezzi) == "y" * 5000
+
+
+def test_broadcast_spezza_e_riporta_il_motivo_vero(monkeypatch):
+    monkeypatch.setattr(bot, "BOT_TOKEN", "T")
+    monkeypatch.setattr(bot, "ALLOWED_CHAT", "42")
+
+    class C:
+        def __init__(self, esito):
+            self.esito = esito
+            self.calls = []
+
+        def _api(self, method, params):
+            self.calls.append(params["text"])
+            return self.esito
+
+    lungo = (chr(10) * 2).join("blocco " + "z" * 900 for _ in range(8))
+    c = C({"ok": True})
+    ok, nota = bot.broadcast(lungo, client=c)
+    assert ok and len(c.calls) > 1 and "messaggi" in nota
+
+    # e quando Telegram rifiuta, il motivo e' il suo, non inventato qui
+    c2 = C({"ok": False, "description": "Bad Request: message is too long"})
+    ok2, motivo = bot.broadcast("qualcosa", client=c2)
+    assert ok2 is False and "message is too long" in motivo

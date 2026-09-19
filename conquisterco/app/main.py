@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import urllib.parse
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -491,11 +492,11 @@ def media_flag(uid: int, conn=Depends(get_db)):
 # --- Admin (gestione utenti) ----------------------------------------------
 
 @app.get("/admin", response_class=HTMLResponse)
-def admin_page(request: Request, sent: str = "", conn=Depends(get_db)):
+def admin_page(request: Request, sent: str = "", perche: str = "", conn=Depends(get_db)):
     require_admin(request)
     return templates.TemplateResponse(request, "admin.html", _ctx(
         request, users=data.list_users(conn), me=request.session.get("name"),
-        bot_ok=bot.bot_enabled(), sent=sent,
+        bot_ok=bot.bot_enabled(), sent=sent, perche=perche,
         manual_badges=data.manual_badges(conn),
         manual_assignments=data.manual_assignments(conn)))
 
@@ -519,8 +520,10 @@ def admin_broadcast(request: Request, message: str = Form(""), conn=Depends(get_
         return RedirectResponse("/admin?sent=empty", status_code=303)
     if not bot.bot_enabled():
         return RedirectResponse("/admin?sent=off", status_code=303)
-    ok = bot.broadcast(text)
-    return RedirectResponse(f"/admin?sent={'ok' if ok else 'fail'}", status_code=303)
+    ok, motivo = bot.broadcast(text)
+    q = urllib.parse.quote(motivo or "")
+    return RedirectResponse(f"/admin?sent={'ok' if ok else 'fail'}&perche={q}",
+                            status_code=303)
 
 
 @app.post("/admin/create")

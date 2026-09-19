@@ -23,8 +23,8 @@
   <div class="admin-wrap">
     <h2>{{ T.adm_bc_title }}</h2>
     <p class="muted">{{ T.adm_bc_hint }}</p>
-    {% if sent == 'ok' %}<p class="bc-ok">{{ T.adm_bc_sent }}</p>
-    {% elif sent == 'fail' %}<p class="bc-err">{{ T.adm_bc_fail }}</p>
+    {% if sent == 'ok' %}<p class="bc-ok">{{ T.adm_bc_sent }}{% if perche %} ({{ perche }}){% endif %}</p>
+    {% elif sent == 'fail' %}<p class="bc-err">{{ T.adm_bc_fail }}{% if perche %} — {{ perche }}{% endif %}</p>
     {% elif sent == 'off' %}<p class="bc-err">{{ T.adm_bc_off }}</p>
     {% elif sent == 'empty' %}<p class="bc-err">{{ T.adm_bc_empty }}</p>{% endif %}
     {% if bot_ok %}

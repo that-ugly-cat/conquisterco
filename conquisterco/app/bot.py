@@ -19,6 +19,7 @@ import os
 import random
 import secrets
 import sqlite3
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -108,12 +109,21 @@ class TelegramClient:
         self._fetch = fetch or _default_fetch
 
     def _api(self, method: str, params: dict) -> dict:
+        """Ritorna sempre un dict. In caso di rifiuto di Telegram conserva la
+        `description`: inghiottirla faceva sembrare un token sbagliato quello
+        che era un messaggio troppo lungo, e il pannello admin accusava il
+        token per qualunque causa."""
         url = f"https://api.telegram.org/bot{self.token}/{method}"
         data = urllib.parse.urlencode(params).encode()
         try:
             return json.loads(self._fetch(url, data))
-        except Exception:
-            return {}
+        except urllib.error.HTTPError as e:      # 400/403: il corpo dice perché
+            try:
+                return json.loads(e.read())
+            except Exception:
+                return {"ok": False, "description": f"HTTP {e.code}"}
+        except Exception as e:
+            return {"ok": False, "description": str(e) or e.__class__.__name__}
 
     def send_message(self, chat_id, text: str) -> None:
         self._api("sendMessage", {"chat_id": chat_id, "text": text})
@@ -149,14 +159,74 @@ def bot_enabled() -> bool:
     return bool(BOT_TOKEN and ALLOWED_CHAT)
 
 
-def broadcast(text: str, client: "TelegramClient | None" = None) -> bool:
-    """Manda un messaggio libero al gruppo (usato dal pannello admin). False se il
-    bot non è configurato o se l'invio fallisce."""
+TG_MAX_UNITS = 4096      # limite di un messaggio, in unità UTF-16 (non caratteri)
+
+
+def _lunghezza_tg(s: str) -> int:
+    """Quanto è lungo un testo *per Telegram*: unità UTF-16, non caratteri
+    Python. Un'emoji ne vale 2 e una bandierina 🇮🇹 ne vale 4, perché è una
+    coppia di indicatori regionali. Contare i caratteri sottostima, e su un
+    annuncio pieno di bandierine sottostima di parecchio."""
+    return len(s.encode("utf-16-le")) // 2
+
+
+def spezza_per_telegram(text: str, limite: int = TG_MAX_UNITS) -> list[str]:
+    """Divide un testo in messaggi che Telegram accetta, tagliando dove fa meno
+    male: prima fra i paragrafi, poi fra le righe, e solo in ultimo dentro una
+    riga. Un testo già corto resta un pezzo solo."""
+    if _lunghezza_tg(text) <= limite:
+        return [text]
+
+    def taglia(blocchi: list[str], colla: str) -> list[str]:
+        fuori, cur = [], ""
+        for b in blocchi:
+            prova = f"{cur}{colla}{b}" if cur else b
+            if _lunghezza_tg(prova) <= limite:
+                cur = prova
+            else:
+                if cur:
+                    fuori.append(cur)
+                cur = b
+        if cur:
+            fuori.append(cur)
+        return fuori
+
+    pezzi = taglia(text.split("\n\n"), "\n\n")
+    fuori = []
+    for p in pezzi:
+        if _lunghezza_tg(p) <= limite:
+            fuori.append(p)
+            continue
+        for q in taglia(p.split("\n"), "\n"):          # secondo tentativo: le righe
+            while _lunghezza_tg(q) > limite:           # ultima risorsa: taglio netto
+                n = limite
+                while _lunghezza_tg(q[:n]) > limite:
+                    n -= 16
+                fuori.append(q[:n])
+                q = q[n:]
+            if q:
+                fuori.append(q)
+    return fuori
+
+
+def broadcast(text: str, client: "TelegramClient | None" = None) -> tuple[bool, str]:
+    """Manda un messaggio libero al gruppo (usato dal pannello admin).
+
+    Ritorna (riuscito, motivo). Il testo lungo viene **spezzato** invece di
+    essere rifiutato: un pannello che serve a mandare annunci deve accettare un
+    annuncio. E il motivo del rifiuto arriva da Telegram, non inventato qui."""
     if not bot_enabled():
-        return False
-    res = (client or TelegramClient())._api(
-        "sendMessage", {"chat_id": ALLOWED_CHAT, "text": text})
-    return bool(res.get("ok"))
+        return (False, "bot non configurato")
+    c = client or TelegramClient()
+    pezzi = spezza_per_telegram(text)
+    for i, p in enumerate(pezzi, 1):
+        res = c._api("sendMessage", {"chat_id": ALLOWED_CHAT, "text": p})
+        if not res.get("ok"):
+            motivo = res.get("description") or "causa sconosciuta"
+            if len(pezzi) > 1:
+                motivo = f"pezzo {i} di {len(pezzi)}: {motivo}"
+            return (False, motivo)
+    return (True, f"{len(pezzi)} messaggi" if len(pezzi) > 1 else "")
 
 
 # ---------------------------------------------------------------------------

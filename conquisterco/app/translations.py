@@ -178,7 +178,7 @@ TRANSLATIONS = {
         "adm_bc_btn": "Invia al gruppo",
         "adm_bc_confirm": "Mandare questo messaggio a tutto il gruppo?",
         "adm_bc_sent": "✓ Messaggio inviato al gruppo.",
-        "adm_bc_fail": "✗ Invio fallito: controlla token e chat del bot.",
+        "adm_bc_fail": "✗ Invio fallito.",
         "adm_bc_off": "Bot non configurato (mancano token o chat): invio disattivato.",
         "adm_bc_empty": "Messaggio vuoto: niente da inviare.",
         # badge manuali (assegnati dal Sistema)
@@ -414,7 +414,7 @@ TRANSLATIONS = {
         "adm_bc_btn": "Send to group",
         "adm_bc_confirm": "Send this message to the whole group?",
         "adm_bc_sent": "✓ Message sent to the group.",
-        "adm_bc_fail": "✗ Send failed: check the bot token and chat.",
+        "adm_bc_fail": "✗ Send failed.",
         "adm_bc_off": "Bot not configured (missing token or chat): sending disabled.",
         "adm_bc_empty": "Empty message: nothing to send.",
         "adm_badge_title": "Special badges",
