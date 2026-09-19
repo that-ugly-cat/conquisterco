@@ -178,9 +178,11 @@ con `territory_osm_id`, quindi quella cacata non conquista, non contende, non fa
 punteggio e non concorre a nessun altro badge. Sulla mappa in modalità Dump il pin però
 si vede, perché `dumps_geo` non filtra: era una cacata **visibile e muta**.
 
-**Cacca Nautica** (ripetibile, 🌊) è l'unica regola che legge quei depositi, da una lista
-`ctx.deposits_nautici` tenuta **separata** di proposito: infilarli fra gli altri farebbe
-ragionare ogni regola su un territorio `None`.
+**Cacca Nautica** (ripetibile, 🌊) legge quei depositi da una lista `ctx.deposits_nautici`
+tenuta **separata** di proposito: infilarli fra gli altri farebbe ragionare ogni regola su
+un territorio `None`. Dal 19 set li legge anche **Gnnn!** (§sotto), e sono le uniche due
+regole a farlo: se l'incentivo è che cagare vale, vale anche dove non c'è un comune da
+conquistare.
 
 > Al 19 set 2026 i depositi senza comune dell'intero cacasto sono **tre**, tutti dello
 > stesso giocatore e tutti in mare: Golfo di Napoli, Eolie, largo dell'Elba — le cacate

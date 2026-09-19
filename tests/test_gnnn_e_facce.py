@@ -223,3 +223,22 @@ def test_la_cacca_in_mare_resta_fuori_dal_resto_del_motore(conn, geo):
     codici = {x.code for x in evaluate(conn) if x.user_id == a}
     assert codici == {"cacca_nautica"}, f"il mare ha fatto scattare anche: {codici}"
     assert conn.execute("SELECT COUNT(*) FROM territory_ownership").fetchone()[0] == 0
+
+
+def test_gnnn_conta_anche_le_cacate_in_acqua(conn, geo):
+    """Se l'incentivo e' «cagare vale», vale anche dove non c'e' un comune."""
+    from conquisterco.ingest import add_deposit
+
+    a = add_user(conn, "A")
+    dep(conn, a, 1012, "2026-06-01 10:00:00")                       # a terra
+    add_deposit(conn, user_id=a, ts="2026-06-02 10:00:00",
+                lat=0.0, lon=-30.0, source="telegram")              # in mare
+    run_all(conn, geo)
+    _stitico(conn, a, "2026-05-01 00:00:00")
+
+    got = {g.ts_earned: g.context for g in _awards(conn, "gnnn", a)}
+    assert len(got) == 2
+    assert got["2026-06-02 10:00:00"] == "in mare"   # quella in acqua, con la sua etichetta
+    assert got["2026-06-01 10:00:00"] not in (None, "", "in mare")   # quella a terra porta il comune
+    # e la cacata in mare prende sia Gnnn! sia Cacca Nautica
+    assert len(_awards(conn, "cacca_nautica", a)) == 1

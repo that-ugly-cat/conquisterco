@@ -124,6 +124,9 @@ class EvalContext:
         self.deposits_by_user: dict[int, list[dict]] = {}
         for d in self.deposits:
             self.deposits_by_user.setdefault(d["user_id"], []).append(d)
+        self.nautici_by_user: dict[int, list[dict]] = {}
+        for d in self.deposits_nautici:
+            self.nautici_by_user.setdefault(d["user_id"], []).append(d)
 
         self.flips = [
             {
@@ -917,12 +920,19 @@ def _teano(ctx: EvalContext) -> list[Award]:
 def _gnnn(ctx: EvalContext) -> list[Award]:
     """Un Gnnn! per ogni deposito fatto MENTRE eri dichiarato stitico.
     Punti fissi e nessun decadimento (config.GNNN_POINTS): è un incentivo a
-    cagare, e un incentivo che si sgonfia dopo tre giorni non incentiva niente."""
+    cagare, e un incentivo che si sgonfia dopo tre giorni non incentiva niente.
+
+    Conta **anche le cacate in acqua**, che per il resto del motore non
+    esistono (vedi `cacca_nautica`): se la regola è che cagare vale, vale anche
+    dove non c'è un comune da conquistare. È la seconda e ultima regola che
+    guarda i depositi nautici."""
     out = []
     for uid, periods in ctx.stitico_periods.items():
-        for d in ctx.deposits_by_user.get(uid, []):
+        miei = (ctx.deposits_by_user.get(uid, [])
+                + ctx.nautici_by_user.get(uid, []))
+        for d in sorted(miei, key=lambda x: x["ts"]):
             if any(a <= d["ts"] and (b is None or d["ts"] < b) for a, b in periods):
-                out.append(Award("gnnn", uid, d["ts"], d["name"] or ""))
+                out.append(Award("gnnn", uid, d["ts"], d.get("name") or "in mare"))
     return out
 
 
