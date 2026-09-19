@@ -17,10 +17,12 @@ from __future__ import annotations
 import json
 import os
 import random
+import secrets
 import sqlite3
 import urllib.parse
 import urllib.request
 from datetime import datetime
+from pathlib import Path
 
 from ..achievements import REGISTRY
 from ..elevation import enrich_altitude
@@ -28,7 +30,7 @@ from ..enrich_osm import enrich_deposits_osm
 from ..ingest import add_deposit
 from ..pipeline import finalize
 from .. import faces, weeks
-from ..util import parse_ts
+from ..util import is_video, parse_ts
 from . import data, triggers
 from .translations import TRANSLATIONS
 
@@ -76,10 +78,28 @@ TRIGGER_CHANCE = float(os.environ.get("CONQUISTERCO_TRIGGER_CHANCE", "1.0"))
 # Client Telegram
 # ---------------------------------------------------------------------------
 
-def _default_fetch(url: str, data: bytes | None = None) -> bytes:
-    req = urllib.request.Request(url, data=data)
+def _default_fetch(url: str, data: bytes | None = None,
+                   headers: dict | None = None) -> bytes:
+    req = urllib.request.Request(url, data=data, headers=headers or {})
     with urllib.request.urlopen(req, timeout=30) as r:
         return r.read()
+
+
+def _multipart(campi: dict, nome_file_field: str, filename: str, blob: bytes) -> tuple[bytes, str]:
+    """Corpo `multipart/form-data` scritto a mano. L'alternativa era aggiungere
+    una dipendenza HTTP al progetto per mandare una foto alla settimana."""
+    b = "----conquisterco" + secrets.token_hex(8)
+    crlf = chr(13) + chr(10)
+    out = bytearray()
+    for k, v in campi.items():
+        out += (f'--{b}{crlf}Content-Disposition: form-data; name="{k}"'
+                f'{crlf}{crlf}{v}{crlf}').encode()
+    out += (f'--{b}{crlf}Content-Disposition: form-data; name="{nome_file_field}"; '
+            f'filename="{filename}"{crlf}'
+            f'Content-Type: application/octet-stream{crlf}{crlf}').encode()
+    out += blob + crlf.encode()
+    out += f"--{b}--{crlf}".encode()
+    return bytes(out), f"multipart/form-data; boundary={b}"
 
 
 class TelegramClient:
@@ -103,6 +123,22 @@ class TelegramClient:
 
     def download(self, file_path: str) -> bytes:
         return self._fetch(f"https://api.telegram.org/file/bot{self.token}/{file_path}")
+
+    def send_media(self, chat_id, blob: bytes, filename: str, caption: str,
+                   *, video: bool = False) -> bool:
+        """Carica i byte invece di riusare il `file_id` di Telegram. Il file_id
+        ci sarebbe (i selfie del bot sono salvati col file_id come nome) e
+        risparmierebbe l'upload, ma non ce l'hanno i selfie importati da
+        WhatsApp: due percorsi per una foto a settimana non valgono il risparmio."""
+        metodo, campo = ("sendVideo", "video") if video else ("sendPhoto", "photo")
+        body, ctype = _multipart({"chat_id": str(chat_id), "caption": caption},
+                                 campo, filename, blob)
+        try:
+            r = json.loads(self._fetch(f"https://api.telegram.org/bot{self.token}/{metodo}",
+                                       body, {"Content-Type": ctype}))
+            return bool(r.get("ok"))
+        except Exception:
+            return False
 
     def set_webhook(self, url: str) -> dict:
         return self._api("setWebhook", {"url": url})
@@ -422,7 +458,34 @@ def _recap_message(recap: dict, *, face: dict | None = None,
     return "\n".join(lines)
 
 
-def send_weekly_recap(conn, client=None) -> bool:
+def _manda_selfie_proclamato(conn, eletto: dict, client, media_dir) -> bool:
+    """Manda il selfie della faccia di merda come messaggio a parte.
+
+    A parte e non come didascalia del recap per due ragioni: la didascalia di
+    Telegram si ferma a 1024 caratteri e il recap ne fa mille abbondanti, e se
+    l'invio della foto fallisce il verdetto e' gia' stato annunciato a parole,
+    che e' la cosa che conta."""
+    if not media_dir or not ALLOWED_CHAT:
+        return False
+    row = conn.execute("SELECT photo_ref FROM deposits WHERE id=?",
+                       (eletto["deposit_id"],)).fetchone()
+    if row is None or not row["photo_ref"]:
+        return False
+    base = Path(media_dir).resolve()
+    f = (base / row["photo_ref"]).resolve()
+    if not str(f).startswith(str(base)) or not f.exists():
+        return False      # il file non c'e' piu': nove su 1252 sono cosi'
+    didascalia = "\n".join([
+        f"💩 Faccia di merda della settimana: {eletto['author']} "
+        f"— {eletto['total']} 💩 da {eletto['voters']} votanti.",
+        f"💩 Shit face of the week: {eletto['author']} "
+        f"— {eletto['total']} 💩 from {eletto['voters']} voters.",
+    ])
+    return client.send_media(ALLOWED_CHAT, f.read_bytes(), f.name, didascalia,
+                             video=is_video(row["photo_ref"]))
+
+
+def send_weekly_recap(conn, client=None, media_dir=None) -> bool:
     """Il recap è l'evento che chiude la settimana, non solo il messaggio che la
     racconta. Nell'ordine: proclama la faccia di merda votata (quella della
     settimana prima, il cui voto si chiude adesso), chiude la settimana in
@@ -449,7 +512,10 @@ def send_weekly_recap(conn, client=None) -> bool:
     msg = _recap_message(data.weekly_recap(conn, week), face=face, vote_url=vote_url)
     if not msg or not ALLOWED_CHAT:
         return False
-    (client or TelegramClient()).send_message(ALLOWED_CHAT, msg)
+    client = client or TelegramClient()
+    client.send_message(ALLOWED_CHAT, msg)
+    if elected:
+        _manda_selfie_proclamato(conn, elected, client, media_dir)
     return True
 
 

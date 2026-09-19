@@ -16,7 +16,8 @@ from . import bot
 
 def main() -> None:
     conn = connect(os.environ.get("CONQUISTERCO_DB", "conquisterco_real.db"))
-    if bot.send_weekly_recap(conn):
+    media = os.environ.get("CONQUISTERCO_MEDIA", "media")
+    if bot.send_weekly_recap(conn, media_dir=media):
         print("recap inviato al gruppo")
     else:
         print("niente da inviare (nessun attivo, o TELEGRAM_CHAT_ID/token mancanti)")

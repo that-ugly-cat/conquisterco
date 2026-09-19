@@ -330,6 +330,12 @@ volta.
   persone che ti danno 2 battono una che ne dà 5. Parità in testa, o meno di
   `FACE_MIN_VOTERS` votanti nella settimana: **nessuna proclamazione**, ma il voto si
   chiude lo stesso — una settimana non resta aperta in eterno.
+- Il recap **manda anche il selfie vincitore**, come messaggio a parte e non come
+  didascalia del recap: la didascalia di Telegram si ferma a 1024 caratteri e il recap ne
+  fa mille abbondanti. Se l'invio della foto fallisce il verdetto è già stato annunciato a
+  parole. I byte vengono caricati (`sendPhoto`/`sendVideo` in multipart) invece di riusare
+  il `file_id` di Telegram: il file_id ci sarebbe, perché i selfie del bot sono salvati
+  col file_id come nome, ma non ce l'hanno quelli importati da WhatsApp.
 - La proclamazione vive in `weeks.face_deposit_id` ed è **dato grezzo**. Il badge
   ripetibile **Faccia di Merda** la rilegge, come i manuali rileggono `manual_awards`,
   ed è datato sul selfie perché stia nel punto giusto della storia.

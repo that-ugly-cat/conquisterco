@@ -165,7 +165,7 @@ def test_sotto_la_soglia_si_resta_fuori_graduatoria_ma_in_lista(conn, geo, monke
     assert all(r["ranked"] for r in lb[:nomi.index("Meteora")])
 
 
-def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch):
+def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch, tmp_path):
     """Il giro completo del recap: chiude la settimana, elegge la faccia di
     merda di quella prima, e apre il voto su quella appena chiusa."""
     from conquisterco import faces
@@ -180,8 +180,10 @@ def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch):
     dep(conn, b, 1005, _ts(now - timedelta(hours=7)))
     run_all(conn, geo)
 
+    (tmp_path / "x.jpg").write_bytes(b"finti-byte-di-selfie")   # il file che `dep` dichiara
     tg = FakeTG()
-    assert bot.send_weekly_recap(conn, tg)            # primo recap: chiude e apre il voto
+    assert bot.send_weekly_recap(conn, tg, media_dir=tmp_path)   # chiude e apre il voto
+    assert tg.media == [], "al primo recap non c'e' niente da proclamare"
     assert "/vote" in tg.sent[0][1]
     aperta = faces.open_vote_week(conn)
     assert aperta is not None
@@ -195,8 +197,15 @@ def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch):
     # una settimana avanti: weeks usa datetime solo per now()
     monkeypatch.setattr(weeks, "datetime", SimpleNamespace(now=lambda: dopo))
     tg2 = FakeTG()
-    assert bot.send_weekly_recap(conn, tg2)
+    assert bot.send_weekly_recap(conn, tg2, media_dir=tmp_path)
     assert "Faccia di merda della settimana scorsa" in tg2.sent[0][1]
+    # il selfie parte come messaggio a se', dopo il testo
+    assert len(tg2.media) == 1
+    foto = tg2.media[0]
+    assert foto["file"] == "x.jpg" and foto["byte"] == len(b"finti-byte-di-selfie")
+    assert foto["video"] is False
+    assert "Faccia di merda della settimana" in foto["caption"]
+    assert "Shit face of the week" in foto["caption"]
     assert conn.execute(
         "SELECT face_deposit_id FROM weeks WHERE id=?", (aperta["id"],)
     ).fetchone()["face_deposit_id"] == dbid

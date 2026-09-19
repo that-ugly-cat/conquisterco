@@ -11,9 +11,15 @@ bot._elevate = lambda conn: None
 class FakeTG:
     def __init__(self):
         self.sent = []
+        self.media = []
 
     def send_message(self, chat_id, text):
         self.sent.append((chat_id, text))
+
+    def send_media(self, chat_id, blob, filename, caption, *, video=False):
+        self.media.append({"chat": chat_id, "file": filename, "caption": caption,
+                           "video": video, "byte": len(blob)})
+        return True
 
     def file_path(self, file_id):
         return f"photos/{file_id}.jpg"
