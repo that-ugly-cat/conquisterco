@@ -13,7 +13,11 @@ POLONIA_COMUNI = 3        # comuni polacchi posseduti in contemporanea
 WATERLOO_COMUNI = 3       # comuni francesi distinti in cui hai depositato
 
 SCALATORE_M = 2000.0      # quota sopra la quale scatta Scalatore
-BATISFERA_M = 0.0         # sotto questa quota (livello del mare) scatta Batisfera
+BATISFERA_M = -5.0        # sotto questa quota scatta Batisfera. NON zero: il DEM
+                          # sbaglia di un metro su una spiaggia, e il 19 set 2026 il
+                          # badge e il record "piu' in basso" erano entrambi appesi a
+                          # due depositi a -1 m a Jesolo. Cinque metri e' rumore di DEM,
+                          # -5 no.
 
 TELETRASPORTO_KMH = 900.0  # velocità implicita oltre cui il salto è "sospetto"
 

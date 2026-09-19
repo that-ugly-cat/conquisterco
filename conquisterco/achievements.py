@@ -318,7 +318,8 @@ def _scalatore(ctx: EvalContext) -> list[Award]:
     ]
 
 
-@achievement("batisfera", "Batisfera", "Deposito sotto il livello del mare.")
+@achievement("batisfera", "Batisfera",
+             f"Deposito sotto i {abs(int(config.BATISFERA_M))} m sotto il livello del mare.")
 def _batisfera(ctx: EvalContext) -> list[Award]:
     return [
         Award("batisfera", d["user_id"], d["ts"], f"{ctx.tname(d['territory'])} {d['altitude']:.0f} m")

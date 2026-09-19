@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from . import config
 from .ownership import replay_flips
-from .util import haversine_km, parse_ts
+from .util import parse_ts
 
 
 def _names(conn: sqlite3.Connection) -> dict[int, str]:
@@ -133,24 +133,6 @@ def _streaks(conn: sqlite3.Connection) -> dict[int, int]:
     return out
 
 
-def _trasferta(conn: sqlite3.Connection) -> dict | None:
-    """Deposito più lontano dalla home base del suo autore."""
-    homes = {r["id"]: (r["home_lat"], r["home_lon"])
-             for r in conn.execute("SELECT id, home_lat, home_lon FROM users")}
-    best = None
-    for r in conn.execute("SELECT user_id, lat, lon FROM deposits"):
-        h = homes.get(r["user_id"])
-        if not h or h[0] is None:
-            continue
-        km = haversine_km(h[0], h[1], r["lat"], r["lon"])
-        if best is None or km > best[1]:
-            best = (r["user_id"], km)
-    if best is None:
-        return None
-    names = _names(conn)
-    return {"user_id": best[0], "name": names.get(best[0], str(best[0])), "value": round(best[1], 1)}
-
-
 def _latifondista(conn: sqlite3.Connection) -> dict | None:
     flips = [
         {"territory": r["territory_osm_id"], "ts": r["ts"],
@@ -175,7 +157,7 @@ def records(conn: sqlite3.Connection) -> dict:
         uid = max(streaks, key=streaks.get)
         streak_holder = {"user_id": uid, "name": names.get(uid, str(uid)), "value": streaks[uid]}
 
-    # esploratore / volume / passaporto
+    # esploratore / volume / cosmopolita
     explorer = defaultdict(set)
     volume = defaultdict(int)
     nations = defaultdict(set)
@@ -202,10 +184,9 @@ def records(conn: sqlite3.Connection) -> dict:
         "ovest": _extreme(conn, "d.lon", "ASC"),
         "piu_in_alto": _extreme(conn, "d.altitude", "DESC"),
         "piu_in_basso": _extreme(conn, "d.altitude", "ASC"),
-        "trasferta": _trasferta(conn),
         "esploratore": _top(explorer),
         "volume": _top(volume, transform=lambda x: x),
-        "passaporto": _top(nations),
+        "cosmopolita": _top(nations),
         "streak": streak_holder,
         "latifondista": _latifondista(conn),
     }

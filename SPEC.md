@@ -101,10 +101,16 @@ Ognuna ha un singolo detentore, con storia dei sorpassi:
 
 - 🧭 **Più a Nord / Sud / Est / Ovest** (estremi lat/lon)
 - ⛰️ **Più in alto** / 🕳️ **Più in basso** (altitudine)
-- 📏 **Trasferta più lontana** (distanza da `home_base`)
 - 🗺️ **Esploratore** — più comuni distinti lifetime
 - 💩 **Volume** — più depositi totali
-- 🌍 **Passaporto** — più nazioni distinte
+- 🌍 **Cosmopolita** — più nazioni distinte (si chiamava *Passaporto*: rinominato il
+  19 set 2026 perché collideva col badge omonimo, che è un'altra cosa — il badge è una
+  soglia a 5 nazioni, il record è un primato)
+
+> **Tolto il 19 set 2026: 📏 Trasferta più lontana** (distanza da `home_base`). Non era
+> ridondante, era **morta**: `users.home_lat` non aveva UI né nel profilo né nell'admin,
+> si scriveva solo da `add_user()` e in produzione era NULL per 26 utenti su 26. La riga
+> mostrava un trattino da sempre. Le colonne restano nello schema, non scritte da nessuno.
 - 🔥 **Streak** — giorni consecutivi con ≥1 deposito
 - 👑 **Latifondista** — record di comuni posseduti in contemporanea
 

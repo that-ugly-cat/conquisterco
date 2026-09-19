@@ -16,14 +16,14 @@ def add_user(conn: sqlite3.Connection, display_name: str, *, role: str = "user",
              wa_handle: str | None = None, telegram_id: str | None = None,
              color: str | None = None, flag_ref: str | None = None,
              avatar_ref: str | None = None,
-             home_lat: float | None = None, home_lon: float | None = None) -> int:
+             ) -> int:
     cur = conn.execute(
         """INSERT INTO users
            (display_name, role, wa_handle, telegram_id, color, flag_ref,
-            avatar_ref, home_lat, home_lon)
-           VALUES (?,?,?,?,?,?,?,?,?)""",
+            avatar_ref)
+           VALUES (?,?,?,?,?,?,?)""",
         (display_name, role, wa_handle, telegram_id, color, flag_ref,
-         avatar_ref, home_lat, home_lon),
+         avatar_ref),
     )
     conn.commit()
     return cur.lastrowid

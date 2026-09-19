@@ -218,7 +218,7 @@ async function loadPanels() {
   }
 
   const keys = ["nord", "sud", "est", "ovest", "piu_in_alto", "piu_in_basso",
-    "trasferta", "esploratore", "volume", "passaporto", "streak", "latifondista"];
+    "esploratore", "volume", "cosmopolita", "streak", "latifondista"];
   let r = "";
   for (const k of keys) {
     const rec = lb.records[k];

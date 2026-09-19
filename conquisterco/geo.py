@@ -84,7 +84,8 @@ _CATALOG: list[_Cell] = [
     _Cell(4001, "Madrid", "Spain", None, 40.4168, -3.7038, 667, 604.3),
     _Cell(4002, "Berlin", "Germany", None, 52.5200, 13.4050, 34, 891.7),
     _Cell(4003, "Zürich", "Switzerland", None, 47.3769, 8.5417, 408, 87.9),
-    _Cell(4004, "Rotterdam", "Netherlands", None, 51.9244, 4.4777, -2, 324.1),  # sotto il mare
+    _Cell(4004, "Rotterdam", "Netherlands", None, 51.9244, 4.4777, -2, 324.1),  # appena sotto: NON basta
+    _Cell(4005, "Zuidplaspolder", "Netherlands", None, 52.0300, 4.6300, -7, 45.0),  # sotto sul serio
 ]
 
 

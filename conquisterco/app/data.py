@@ -17,8 +17,8 @@ from .. import weeks
 
 _RECORD_LABELS = {
     "nord": "Più a Nord", "sud": "Più a Sud", "est": "Più a Est", "ovest": "Più a Ovest",
-    "piu_in_alto": "Più in alto", "piu_in_basso": "Più in basso", "trasferta": "Trasferta",
-    "esploratore": "Esploratore", "volume": "Volume", "passaporto": "Passaporto",
+    "piu_in_alto": "Più in alto", "piu_in_basso": "Più in basso",
+    "esploratore": "Esploratore", "volume": "Volume", "cosmopolita": "Cosmopolita",
     "streak": "Streak", "latifondista": "Latifondista",
 }
 

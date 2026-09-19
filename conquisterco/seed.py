@@ -30,11 +30,10 @@ def _dep(conn, uid, osm_id, ts, *, photo=True):
 
 
 def build_world(conn: sqlite3.Connection) -> dict[str, int]:
-    spit = add_user(conn, "Spit", role="admin", color="#8B4513",
-                    home_lat=46.07, home_lon=11.12)
-    fede = add_user(conn, "Fede", color="#B5651D", home_lat=41.90, home_lon=12.50)
-    bru = add_user(conn, "Bru", color="#6F4E37", home_lat=45.46, home_lon=9.19)
-    ranz = add_user(conn, "Ranz", color="#A0522D", home_lat=40.85, home_lon=14.27)
+    spit = add_user(conn, "Spit", role="admin", color="#8B4513")
+    fede = add_user(conn, "Fede", color="#B5651D")
+    bru = add_user(conn, "Bru", color="#6F4E37")
+    ranz = add_user(conn, "Ranz", color="#A0522D")
     return {"spit": spit, "fede": fede, "bru": bru, "ranz": ranz}
 
 
@@ -114,8 +113,8 @@ def report(conn: sqlite3.Connection) -> str:
     out.append(_hr("Record"))
     labels = {
         "nord": "Più a Nord", "sud": "Più a Sud", "est": "Più a Est", "ovest": "Più a Ovest",
-        "piu_in_alto": "Più in alto", "piu_in_basso": "Più in basso", "trasferta": "Trasferta",
-        "esploratore": "Esploratore", "volume": "Volume", "passaporto": "Passaporto",
+        "piu_in_alto": "Più in alto", "piu_in_basso": "Più in basso",
+        "esploratore": "Esploratore", "volume": "Volume", "cosmopolita": "Cosmopolita",
         "streak": "Streak", "latifondista": "Latifondista",
     }
     for key, lab in labels.items():

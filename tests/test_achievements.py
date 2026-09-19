@@ -93,9 +93,16 @@ def test_spartizione_polonia(conn, geo):
 
 
 def test_scalatore_e_batisfera(conn, geo):
+    """Batisfera vuole -5 m, non «sotto zero»: a un metro sotto il livello del
+    mare il DEM sbaglia, e sui dati veri il badge era appeso a due depositi a
+    -1 m su una spiaggia di Jesolo."""
     a = mkuser(conn, "A")
     dep(conn, a, 1050, "2026-04-01 10:00:00")   # 2050 m
-    dep(conn, a, 4004, "2026-04-02 10:00:00")   # Rotterdam -2 m
+    dep(conn, a, 4004, "2026-04-02 10:00:00")   # Rotterdam -2 m: rumore, non scatta
     codes = _codes(conn, geo)
     assert "scalatore" in codes[a]
-    assert "batisfera" in codes[a]
+    assert "batisfera" not in codes[a]
+
+    b = mkuser(conn, "B")
+    dep(conn, b, 4005, "2026-04-03 10:00:00")   # Zuidplaspolder -7 m: scatta
+    assert "batisfera" in _codes(conn, geo)[b]
