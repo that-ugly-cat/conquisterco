@@ -95,6 +95,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .vcell figcaption{display:flex;justify-content:space-between;align-items:center;gap:.4rem;padding:.35rem .5rem;font-size:.72rem}
 .undo{background:none;border:0;color:var(--accent);cursor:pointer;font-size:.7rem;text-decoration:underline;padding:0;white-space:nowrap}
 .nowrap{white-space:nowrap}
+.wk-sep td{font-size:.68rem;color:var(--muted);font-style:italic;padding-top:.6rem;border-top:1px solid var(--line)}
 
 @media(max-width:680px){
   .prof-grid{grid-template-columns:1fr}

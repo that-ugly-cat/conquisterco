@@ -189,10 +189,20 @@ async function loadPanels() {
     let w = `<table><tr><th>${T.th_num}</th><th>${T.th_player}</th>`
       + `<th class='num'>${T.weeks_ratio}</th><th class='num'>${T.weeks_won}</th>`
       + `<th class='num'>${T.weeks_played}</th></tr>`;
-    wk.leaderboard.forEach((row, i) => {
-      w += `<tr><td>${i + 1}</td>`
+    // sotto la soglia non si e' in graduatoria, ma si compare lo stesso: la
+    // classifica principale include chiunque abbia giocato, e questa fa lo stesso.
+    let pos = 0;
+    let fuori = false;
+    wk.leaderboard.forEach((row) => {
+      if (!row.ranked && !fuori) {
+        fuori = true;
+        w += `<tr class="wk-sep"><td colspan="5">`
+          + esc(T.weeks_unranked.replace("{n}", wk.min_played)) + `</td></tr>`;
+      }
+      w += `<tr${row.ranked ? "" : ' class="muted"'}>`
+        + `<td>${row.ranked ? ++pos : "—"}</td>`
         + `<td><span class="player-link" onclick="showProfile(${row.user_id})">${esc(row.name)}</span></td>`
-        + `<td class="num"><b>${row.ratio.toFixed(2)}</b></td>`
+        + `<td class="num">${row.ranked ? "<b>" + row.ratio.toFixed(2) + "</b>" : "—"}</td>`
         + `<td class="num">${row.won}</td><td class="num">${row.played}</td></tr>`;
     });
     w += "</table>";

@@ -472,7 +472,8 @@ def api_vote_undo(request: Request, deposit_id: int = Form(...), conn=Depends(ge
 @app.get("/api/weeks")
 def api_weeks(conn=Depends(get_db)):
     return {"leaderboard": weeks.weeks_leaderboard(conn),
-            "history": weeks.week_history(conn)}
+            "history": weeks.week_history(conn),
+            "min_played": config.WEEKS_MIN_PLAYED}
 
 
 @app.get("/media/flag/{uid}")

@@ -7,7 +7,7 @@ congela il recap: sono le due cose che questi test tengono ferme.
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 
-from conquisterco import weeks
+from conquisterco import config, weeks
 from conquisterco.ingest import add_user
 from conquisterco.pipeline import run_all
 
@@ -136,6 +136,32 @@ def test_classifica_settimane_vinte_su_giocate(conn, geo):
     # il rateo e' vinte/giocate, e `played` va sempre mostrato accanto
     for r in lb.values():
         assert r["ratio"] == round(r["won"] / r["played"], 3)
+
+
+def test_sotto_la_soglia_si_resta_fuori_graduatoria_ma_in_lista(conn, geo, monkeypatch):
+    """Un 1/1 fa rateo 1.00 e starebbe in testa per sempre: sotto la soglia si
+    esce dalla graduatoria, non dalla lista."""
+    monkeypatch.setattr(config, "WEEKS_MIN_PLAYED", 3)
+    veterano, meteora = add_user(conn, "Veterano"), add_user(conn, "Meteora")
+    now = datetime.now()
+    # il veterano gioca quattro settimane e ne vince due
+    for w, comune in ((6, 1012), (5, 1005), (4, None), (3, None)):
+        dep(conn, veterano, comune or 1012, _ts(now - timedelta(weeks=w)))
+    # la meteora gioca una settimana sola e la vince
+    dep(conn, meteora, 1004, _ts(now - timedelta(weeks=2)))
+    run_all(conn, geo)
+    weeks.close_due_weeks(conn)
+
+    lb = weeks.weeks_leaderboard(conn)
+    per_nome = {r["name"]: r for r in lb}
+    assert per_nome["Meteora"]["played"] == 1
+    assert per_nome["Meteora"]["ranked"] is False
+    assert per_nome["Veterano"]["ranked"] is True
+    # compare comunque, ma in coda: i non graduati stanno tutti dopo i graduati
+    assert per_nome["Meteora"]["ratio"] == 1.0
+    nomi = [r["name"] for r in lb]
+    assert nomi.index("Veterano") < nomi.index("Meteora")
+    assert all(r["ranked"] for r in lb[:nomi.index("Meteora")])
 
 
 def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch):

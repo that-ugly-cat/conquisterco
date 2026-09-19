@@ -74,6 +74,13 @@ GNNN_POINTS = 3.0          # punti di ogni Gnnn! (niente decadimento)
 # settimana di due ore e regalarla a chi ha cagato in quelle due ore.
 MIN_WEEK_DAYS = 3
 
+# Settimane giocate sotto le quali non si entra in graduatoria. Un rateo su una
+# sola settimana non e' un rateo: 1/1 fa 1.00 e starebbe in testa per sempre.
+# Chi non ci arriva NON sparisce, compare sotto la tabella: la classifica
+# principale include deliberatamente chiunque abbia giocato (SS4), e nasconderli
+# qui la contraddirebbe.
+WEEKS_MIN_PLAYED = 5
+
 # --- Faccia di merda della settimana ---------------------------------------
 # Un selfie vale la SOMMA dei voti presi, non la media: vince chi raccoglie piu'
 # merda. Parita' in testa = nessuna proclamazione, come per i comuni.

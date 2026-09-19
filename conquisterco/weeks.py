@@ -180,8 +180,13 @@ def weeks_leaderboard(conn: sqlite3.Connection) -> list[dict]:
     hai depositato almeno una volta: chi non c'era non viene punito per le
     settimane in cui non c'era, ma chi c'era e ha perso sì.
 
-    Ordinata per rateo, poi per settimane vinte: con pochi dati il rateo è
-    rumoroso, quindi la colonna `played` va mostrata sempre accanto."""
+    Sotto `config.WEEKS_MIN_PLAYED` settimane giocate si è **fuori graduatoria**
+    (`ranked=False`), perché un rateo su una sola settimana non è un rateo: 1/1
+    fa 1.00 e resterebbe in testa per sempre. Fuori graduatoria non vuol dire
+    fuori dalla lista — si compare in coda, ordinati per quanto manca ad
+    entrarci. Ordinata per rateo, poi per vinte, poi per giocate; e la colonna
+    `played` va mostrata sempre accanto, perché la soglia riduce il rumore ma
+    non lo azzera."""
     names = {r["id"]: r["name"] for r in conn.execute(
         "SELECT id, COALESCE(public_name, display_name) AS name FROM users")}
     weeks = conn.execute(
@@ -204,9 +209,13 @@ def weeks_leaderboard(conn: sqlite3.Connection) -> list[dict]:
             "user_id": u, "name": names.get(u, str(u)),
             "won": v, "played": p,
             "ratio": round(v / p, 3) if p else 0.0,
+            "ranked": p >= config.WEEKS_MIN_PLAYED,
         })
-    rows.sort(key=lambda x: (x["ratio"], x["won"], x["played"]), reverse=True)
-    return rows
+    rows.sort(key=lambda x: (x["ranked"], x["ratio"], x["won"], x["played"]), reverse=True)
+    # in coda, chi non ha ancora abbastanza settimane: prima chi ci è più vicino
+    coda = [r for r in rows if not r["ranked"]]
+    coda.sort(key=lambda x: (x["played"], x["won"]), reverse=True)
+    return [r for r in rows if r["ranked"]] + coda
 
 
 def week_history(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:

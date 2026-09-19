@@ -254,8 +254,15 @@ quasi mai, perché i badge fanno divergere i decimali.
 
 **Classifica per settimane vinte**: `vinte / giocate`, dove «giocata» è una settimana
 chiusa in cui hai depositato almeno una volta. Chi non c'era non viene punito per le
-settimane in cui non c'era; chi c'era e ha perso sì. Il rateo da solo mente (una su una
-fa 1.00), quindi la colonna `giocate` sta **sempre** accanto.
+settimane in cui non c'era; chi c'era e ha perso sì.
+
+Sotto `WEEKS_MIN_PLAYED` settimane giocate si è **fuori graduatoria**: un rateo su una
+settimana sola non è un rateo, 1/1 fa 1.00 e resterebbe in testa per sempre. Fuori
+graduatoria **non vuol dire fuori dalla lista** — si compare in coda, con posizione e
+rateo a trattino ma vinte e giocate vere, ordinati per quanto manca a entrarci. Il
+principio è quello della classifica principale (§4): chi ha giocato compare. E la colonna
+`giocate` resta **sempre** accanto al rateo, perché la soglia riduce il rumore, non lo
+azzera — con `WEEKS_MIN_PLAYED = 5` il primo in graduatoria sui dati veri ha 8 settimane.
 
 ### Faccia di merda della settimana
 
