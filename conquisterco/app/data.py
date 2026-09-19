@@ -410,6 +410,7 @@ def my_stats(conn: sqlite3.Connection, uid: int, t: dict | None = None) -> dict 
         "weight_kg": round(c["tot"] * AVG_DUMP_G / 1000.0, 1),
         "no_selfie": bool(u["no_selfie"]),   # storico, non piu' letto dal bot
         "visibilita": u["selfie_visibility"] or visibilita.PUBBLICO,
+        "pulisci_chat": bool(u["pulisci_chat"]),
         "ammessi": visibilita.ammessi(conn, uid),
         "altri": [{"id": r["id"], "name": r["name"]} for r in conn.execute(
             """SELECT id, COALESCE(public_name, display_name) AS name FROM users

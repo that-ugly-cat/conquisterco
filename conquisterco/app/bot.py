@@ -150,6 +150,13 @@ class TelegramClient:
         except Exception:
             return False
 
+    def delete_message(self, chat_id, message_id: int) -> bool:
+        """Cancella un messaggio dal gruppo. Richiede che il bot sia
+        amministratore con `can_delete_messages` (promosso il 19 set 2026) e
+        che il messaggio abbia meno di 48 ore — noi cancelliamo subito."""
+        r = self._api("deleteMessage", {"chat_id": chat_id, "message_id": message_id})
+        return bool(r.get("ok"))
+
     def set_webhook(self, url: str) -> dict:
         return self._api("setWebhook", {"url": url})
 
@@ -239,6 +246,22 @@ def _msg_ts(msg: dict) -> str:
 
 def _within(a: str, b: str) -> bool:
     return abs((parse_ts(a) - parse_ts(b)).total_seconds()) <= PAIR_WINDOW_S
+
+
+def _pulisci(conn, client, chat_id, message_id, uid: int) -> bool:
+    """Toglie dalla chat un messaggio di `uid`, se ha chiesto la pulizia.
+
+    Non solleva mai: una cancellazione fallita non deve far saltare
+    l'ingestione del dump, che è il lavoro vero. Al peggio il messaggio resta
+    in chat, ed è lo stato di prima."""
+    if message_id is None or chat_id is None:
+        return False
+    if not visibilita.pulisce_la_chat(conn, uid):
+        return False
+    try:
+        return client.delete_message(chat_id, message_id)
+    except Exception:
+        return False
 
 
 def _no_selfie(conn, uid: int) -> bool:
@@ -641,12 +664,16 @@ def _handle_location(conn, msg: dict, client, resolver, media_dir) -> None:
         return
 
     # foto arrivata prima del pin?
-    buf = conn.execute("SELECT file_id, ts FROM tg_pending_photo WHERE telegram_user_id=?",
-                       (frm.get("id"),)).fetchone()
-    if buf and _within(buf["ts"], ts) and not _no_selfie(conn, uid):
-        ref = _save_photo(client, buf["file_id"], media_dir)
-        if ref:
-            conn.execute("UPDATE deposits SET photo_ref=? WHERE id=?", (ref, did))
+    buf = conn.execute(
+        "SELECT file_id, ts, message_id FROM tg_pending_photo WHERE telegram_user_id=?",
+        (frm.get("id"),)).fetchone()
+    foto_da_pulire = None
+    if buf and _within(buf["ts"], ts):
+        foto_da_pulire = buf["message_id"]
+        if not _no_selfie(conn, uid):
+            ref = _save_photo(client, buf["file_id"], media_dir)   # PRIMA si scarica
+            if ref:
+                conn.execute("UPDATE deposits SET photo_ref=? WHERE id=?", (ref, did))
     conn.execute("DELETE FROM tg_pending_photo WHERE telegram_user_id=?", (frm.get("id"),))
     conn.commit()
 
@@ -655,6 +682,10 @@ def _handle_location(conn, msg: dict, client, resolver, media_dir) -> None:
     finalize(conn)
 
     chat_id = msg["chat"]["id"]
+    # ...e solo ORA si cancella: il file e' gia' sul volume, il dump e' gia'
+    # registrato. Cancellare prima significherebbe rischiare di perdere la foto.
+    _pulisci(conn, client, chat_id, foto_da_pulire, uid)
+    _pulisci(conn, client, chat_id, msg.get("message_id"), uid)
     client.send_message(chat_id, _confirm_message(_comune_of(conn, did)))
     _announce_events(conn, client, chat_id, uid, did, rec_before, awards_before, contested_before)
 
@@ -700,7 +731,13 @@ def _announce_events(conn, client, chat_id, uid, did, rec_before, awards_before,
 def _handle_photo(conn, msg: dict, client, media_dir) -> None:
     frm = msg["from"]
     uid = resolve_sender(conn, frm)
+    chat_id = msg.get("chat", {}).get("id")
+    mid = msg.get("message_id")
     if _no_selfie(conn, uid):
+        # non la salviamo, ma se ha chiesto la pulizia va tolta lo stesso: sono
+        # due domande diverse, e chi non vuole selfie salvati di certo non li
+        # vuole nella cronologia del gruppo
+        _pulisci(conn, client, chat_id, mid, uid)
         return
     file_id = msg["photo"][-1]["file_id"]   # risoluzione massima
     ts = _msg_ts(msg)
@@ -708,13 +745,15 @@ def _handle_photo(conn, msg: dict, client, media_dir) -> None:
         """SELECT id, ts FROM deposits WHERE user_id=? AND source='telegram' AND photo_ref IS NULL
            ORDER BY ts DESC LIMIT 1""", (uid,)).fetchone()
     if dep and _within(dep["ts"], ts):
-        ref = _save_photo(client, file_id, media_dir)
+        ref = _save_photo(client, file_id, media_dir)      # PRIMA si scarica
         if ref:
             conn.execute("UPDATE deposits SET photo_ref=? WHERE id=?", (ref, dep["id"]))
             conn.commit()
-    else:  # nessun pin recente: tieni in sospeso
-        conn.execute("INSERT OR REPLACE INTO tg_pending_photo (telegram_user_id, file_id, ts) VALUES (?,?,?)",
-                     (frm.get("id"), file_id, ts))
+        _pulisci(conn, client, chat_id, mid, uid)          # poi si cancella
+    else:  # nessun pin recente: tieni in sospeso, col suo message_id per dopo
+        conn.execute("""INSERT OR REPLACE INTO tg_pending_photo
+                        (telegram_user_id, file_id, ts, message_id) VALUES (?,?,?,?)""",
+                     (frm.get("id"), file_id, ts, mid))
         conn.commit()
 
 

@@ -129,9 +129,21 @@
               {% if u.id in s.ammessi %}checked{% endif %}> {{ u.name }}</label>
             {% endfor %}
           </div>
+          <hr>
+          <label class="chk"><input type="checkbox" name="pulisci_chat" id="pulisci-chat"
+            {% if s.pulisci_chat %}checked{% endif %}>
+            {{ T.pulisci_chat }} <span class="muted">{{ T.pulisci_chat_d }}</span></label>
           <button>{{ T.save_pref }}</button>
         </form>
         <p class="muted vis-avviso">{{ T.vis_avviso }}</p>
+        <script>
+          // scegliendo «ristretto» la pulizia della chat si accende da se': la
+          // foto lasciata in cronologia renderebbe la scelta inutile. Resta
+          // sbarrabile a mano, e il server fa lo stesso senza javascript.
+          document.querySelector('input[value="ristretto"]').addEventListener('change', (e) => {
+            if (e.target.checked) document.getElementById('pulisci-chat').checked = true;
+          });
+        </script>
         <hr>
         <p class="muted">{{ T.selfie_have.replace('{n}', s.selfie_count | string) }}</p>
         <form method="post" action="/me/selfies/delete" onsubmit="return confirm('{{ T.del_selfies_confirm }}')">

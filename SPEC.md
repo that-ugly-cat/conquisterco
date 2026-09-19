@@ -459,6 +459,34 @@ Due conseguenze volute, non effetti collaterali:
 - **Il pin resta visibile, sparisce solo la foto**, che diventa il coniglio 🐰 già usato
   per i dump senza selfie. La posizione non è il dato protetto.
 
+### Pulizia della chat
+
+Manopola **separata** dal livello (`users.pulisci_chat`), perché sono due domande diverse:
+«chi può vedere la foto sul sito» e «cosa resta nella cronologia del gruppo». Accesa, il
+bot **cancella dalla chat sia la foto sia il pin** appena registrati — di quel dump resta
+in chat solo l'annuncio del bot.
+
+Si accende **da sé quando si passa a `ristretto`**, lato javascript e anche lato server per
+chi non ce l'ha: senza, la foto resterebbe in cronologia e ristretto sarebbe teatro. Ma la
+può accendere anche chi resta pubblico e vuole solo la chat pulita, e si può spegnere a
+mano una volta dentro.
+
+Vincoli tecnici che ne determinano la forma:
+
+- serve che il bot sia **amministratore del gruppo con `can_delete_messages`** (promosso il
+  19 set 2026): l'API non lascia cancellare messaggi altrui a un bot semplice;
+- **prima si scarica, poi si cancella**, sempre. Nel caso della foto-prima-del-pin la
+  cancellazione aspetta che il pin la consumi, perché solo allora il file è sul volume;
+- una foto mandata e mai diventata un dump **resta in chat**: il bot cancella ciò che
+  registra, non tutto quello che passa;
+- una cancellazione fallita non ferma l'ingestione. Al peggio il messaggio resta, che è lo
+  stato di prima.
+
+> **Cancellare dalla chat non è privacy, e va detto al gruppo.** Fra l'invio e la
+> cancellazione passano secondi in cui la notifica è già arrivata sui telefoni; i client
+> Telegram fanno cache; e il file resta sui server di Telegram comunque. La promessa
+> onesta è «non resta nella cronologia», non «nessuno l'ha vista».
+
 > **Cosa NON copre, e va detto a chi lo usa.** I file stanno in chiaro sul volume `/data`,
 > finiscono nel backup off-site, e un admin del sito li vede tutti. «Ristretto» vuol dire
 > ristretto **fra i giocatori**, non cifrato. Chi ha bisogno che una foto non esista deve

@@ -45,6 +45,17 @@ def salva_i_selfie(conn: sqlite3.Connection, proprietario: int) -> bool:
     return livello(conn, proprietario) != NIENTE
 
 
+def pulisce_la_chat(conn: sqlite3.Connection, proprietario: int) -> bool:
+    """Il bot deve cancellare dalla chat i messaggi di questo utente (pin e
+    foto)? È una manopola **separata** dal livello di visibilità, perché sono
+    due domande diverse: «chi può vedere la foto sul sito» e «cosa resta nella
+    cronologia del gruppo». Si accende da sé quando si sceglie `ristretto` —
+    altrimenti ristretto sarebbe teatro, con la foto in chat per sempre — ma
+    la può accendere anche chi resta pubblico e vuole solo la chat pulita."""
+    r = conn.execute("SELECT pulisci_chat FROM users WHERE id=?", (proprietario,)).fetchone()
+    return bool(r and r["pulisci_chat"])
+
+
 def ammessi(conn: sqlite3.Connection, proprietario: int) -> list[int]:
     """Gli id che il proprietario ha messo nella propria lista."""
     return [r["viewer_user_id"] for r in conn.execute(

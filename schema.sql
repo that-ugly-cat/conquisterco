@@ -26,6 +26,7 @@ CREATE TABLE users (
                                                  -- resta per non fare una migrazione distruttiva
     selfie_visibility TEXT NOT NULL DEFAULT 'pubblico'
                       CHECK (selfie_visibility IN ('pubblico','ristretto','niente')),
+    pulisci_chat  INTEGER NOT NULL DEFAULT 0,    -- il bot cancella pin e foto dalla chat
     stitico       INTEGER NOT NULL DEFAULT 0,    -- autodichiarazione: ogni cacata vale un Gnnn!
     role          TEXT    NOT NULL DEFAULT 'user'
                           CHECK (role IN ('user', 'admin')),
@@ -258,5 +259,8 @@ CREATE TABLE tg_link_tokens (
 CREATE TABLE tg_pending_photo (
     telegram_user_id INTEGER PRIMARY KEY,
     file_id          TEXT NOT NULL,
-    ts               TEXT NOT NULL
+    ts               TEXT NOT NULL,
+    message_id       INTEGER          -- serve a cancellarla dalla chat quando il
+                                      -- pin la consuma: prima si scarica, poi si
+                                      -- cancella, e l'ordine non e' negoziabile
 );

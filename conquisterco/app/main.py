@@ -79,6 +79,16 @@ def _migrate(conn) -> None:
         # il vecchio booleano diventa il terzo livello: erano la stessa domanda
         conn.execute("UPDATE users SET selfie_visibility='niente' WHERE no_selfie=1")
         conn.commit()
+    if "pulisci_chat" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN pulisci_chat INTEGER NOT NULL DEFAULT 0")
+        # chi e' gia' ristretto lo vuole per forza: altrimenti la foto resta in
+        # chat per sempre e «ristretto» sarebbe teatro
+        conn.execute("UPDATE users SET pulisci_chat=1 WHERE selfie_visibility='ristretto'")
+        conn.commit()
+    buf_cols = {r["name"] for r in conn.execute("PRAGMA table_info(tg_pending_photo)")}
+    if buf_cols and "message_id" not in buf_cols:
+        conn.execute("ALTER TABLE tg_pending_photo ADD COLUMN message_id INTEGER")
+        conn.commit()
     if "stitico" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN stitico INTEGER NOT NULL DEFAULT 0")
         conn.commit()
@@ -418,7 +428,8 @@ def me_telegram_link(request: Request, conn=Depends(get_db)):
 
 @app.post("/me/selfies")
 def me_selfie_pref(request: Request, livello: str = Form("pubblico"),
-                   ammessi: list[int] = Form(default=[]), conn=Depends(get_db)):
+                   ammessi: list[int] = Form(default=[]),
+                   pulisci_chat: str = Form(None), conn=Depends(get_db)):
     """Tre livelli piu' la lista di chi è ammesso. La lista si salva anche
     quando il livello non è «ristretto»: così chi torna pubblico e poi cambia
     idea non deve rifarla da capo."""
@@ -426,8 +437,15 @@ def me_selfie_pref(request: Request, livello: str = Form("pubblico"),
     if livello not in visibilita.LIVELLI:
         livello = visibilita.PUBBLICO
     uid = request.session["uid"]
-    conn.execute("UPDATE users SET selfie_visibility=?, no_selfie=? WHERE id=?",
-                 (livello, 1 if livello == visibilita.NIENTE else 0, uid))
+    prima = visibilita.livello(conn, uid)
+    pulisce = bool(pulisci_chat)
+    if livello == visibilita.RISTRETTO and prima != visibilita.RISTRETTO:
+        # si accende da se' quando si PASSA a ristretto, anche senza javascript:
+        # altrimenti ristretto sarebbe teatro, con la foto in chat per sempre
+        pulisce = True
+    conn.execute("""UPDATE users SET selfie_visibility=?, no_selfie=?, pulisci_chat=?
+                    WHERE id=?""",
+                 (livello, 1 if livello == visibilita.NIENTE else 0, int(pulisce), uid))
     visibilita.imposta_ammessi(conn, uid, ammessi)
     conn.commit()
     return RedirectResponse("/me", status_code=303)

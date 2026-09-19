@@ -12,6 +12,7 @@ class FakeTG:
     def __init__(self):
         self.sent = []
         self.media = []
+        self.cancellati = []
 
     def send_message(self, chat_id, text):
         self.sent.append((chat_id, text))
@@ -26,6 +27,10 @@ class FakeTG:
 
     def download(self, fp):
         return b"img-bytes"
+
+    def delete_message(self, chat_id, message_id):
+        self.cancellati.append((chat_id, message_id))
+        return True
 
     def set_webhook(self, url):
         return {}

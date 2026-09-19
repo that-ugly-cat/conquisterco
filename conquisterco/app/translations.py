@@ -123,6 +123,8 @@ TRANSLATIONS = {
         "vis_niente": "Non salvarli",
         "vis_niente_d": "(il bot butta via la foto appena arriva)",
         "vis_chi": "Chi può vedere i miei selfie, se sono ristretti:",
+        "pulisci_chat": "Togli i miei messaggi dalla chat del gruppo",
+        "pulisci_chat_d": "(il bot cancella pin e foto dopo averli registrati — di te resta solo l'annuncio)",
         "vis_avviso": "Nota: «ristretti» vuol dire ristretti fra i giocatori. I file restano in chiaro sul server, finiscono nei backup, e un admin li vede comunque. Se una foto non deve esistere, usa «non salvarli».",
         "gal_nascosti": "Le foto di questo giocatore sono ristrette: vedi le cacate ma non i selfie.",
         # stitici
@@ -370,6 +372,8 @@ TRANSLATIONS = {
         "vis_niente": "Don't save them",
         "vis_niente_d": "(the bot discards the photo on arrival)",
         "vis_chi": "Who can see my selfies, when restricted:",
+        "pulisci_chat": "Remove my messages from the group chat",
+        "pulisci_chat_d": "(the bot deletes pin and photo once recorded — only the announcement remains)",
         "vis_avviso": "Note: \"restricted\" means restricted among players. The files sit in the clear on the server, end up in backups, and an admin sees them anyway. If a photo must not exist, use \"don't save them\".",
         "gal_nascosti": "This player's photos are restricted: you see the dumps but not the selfies.",
         # constipated

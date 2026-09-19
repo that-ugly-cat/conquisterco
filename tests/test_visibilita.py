@@ -114,3 +114,118 @@ def test_il_recap_non_ripubblica_una_foto_ristretta(conn, geo, tmp_path, monkeyp
     eletto = {"deposit_id": suo, "author": "Ris", "total": 9, "voters": 3}
     assert bot._manda_selfie_proclamato(conn, eletto, tg, tmp_path) is False
     assert tg.media == []
+
+
+# --- pulizia della chat ----------------------------------------------------
+
+def _pulisci_chat(conn, uid, acceso=True):
+    conn.execute("UPDATE users SET pulisci_chat=? WHERE id=?", (int(acceso), uid))
+    conn.commit()
+
+
+def test_pin_e_foto_spariscono_dalla_chat(conn, geo, tmp_path):
+    """Con la manopola accesa il bot toglie dalla chat sia la foto sia il pin,
+    e lo fa DOPO aver scaricato: il file resta sul volume."""
+    from conquisterco.app import bot
+    from tests.test_bot import FakeResolver, FakeTG, loc, photo
+
+    from conquisterco.ingest import add_user as _au
+    a = _au(conn, "A")
+    conn.execute("UPDATE users SET telegram_id='pulito' WHERE id=?", (a,))
+    conn.commit()
+    _pulisci_chat(conn, a)
+
+    tg = FakeTG()
+    bot.process_update(conn, loc(1, username="pulito", mid=11), client=tg,
+                       resolver=FakeResolver(), media_dir=tmp_path)
+    bot.process_update(conn, photo(1, date=1030, username="pulito", mid=12), client=tg,
+                       resolver=FakeResolver(), media_dir=tmp_path)
+
+    cancellati = [m for _, m in tg.cancellati]
+    assert 11 in cancellati and 12 in cancellati
+    ref = conn.execute("SELECT photo_ref FROM deposits").fetchone()[0]
+    assert ref and (tmp_path / ref).exists(), "la foto deve restare sul volume"
+
+
+def test_senza_manopola_la_chat_non_si_tocca(conn, geo, tmp_path):
+    from conquisterco.app import bot
+    from tests.test_bot import FakeResolver, FakeTG, loc, photo
+
+    from conquisterco.ingest import add_user as _au
+    a = _au(conn, "A")
+    conn.execute("UPDATE users SET telegram_id='sporco' WHERE id=?", (a,))
+    conn.commit()
+
+    tg = FakeTG()
+    bot.process_update(conn, loc(2, username="sporco", mid=21), client=tg,
+                       resolver=FakeResolver(), media_dir=tmp_path)
+    bot.process_update(conn, photo(2, date=1030, username="sporco", mid=22), client=tg,
+                       resolver=FakeResolver(), media_dir=tmp_path)
+    assert tg.cancellati == []
+
+
+def test_foto_prima_del_pin_viene_cancellata_quando_il_pin_la_consuma(conn, geo, tmp_path):
+    """Il caso scomodo: la foto arriva prima, va in buffer, e si puo'
+    cancellare solo quando il pin la consuma — prima si scarica, poi si toglie."""
+    from conquisterco.app import bot
+    from tests.test_bot import FakeResolver, FakeTG, loc, photo
+
+    from conquisterco.ingest import add_user as _au
+    a = _au(conn, "A")
+    conn.execute("UPDATE users SET telegram_id='prima' WHERE id=?", (a,))
+    conn.commit()
+    _pulisci_chat(conn, a)
+
+    tg = FakeTG()
+    bot.process_update(conn, photo(3, date=1000, username="prima", mid=31), client=tg,
+                       resolver=FakeResolver(), media_dir=tmp_path)
+    assert tg.cancellati == [], "in buffer non si cancella ancora: il file non c'e'"
+    bot.process_update(conn, loc(3, date=1030, username="prima", mid=32), client=tg,
+                       resolver=FakeResolver(), media_dir=tmp_path)
+
+    cancellati = [m for _, m in tg.cancellati]
+    assert 31 in cancellati and 32 in cancellati
+    assert conn.execute("SELECT photo_ref FROM deposits").fetchone()[0] is not None
+
+
+def test_chi_non_salva_i_selfie_li_toglie_comunque_dalla_chat(conn, geo, tmp_path):
+    """«Niente» e «pulisci la chat» sono due domande diverse: chi non vuole la
+    foto salvata di certo non la vuole nella cronologia."""
+    from conquisterco.app import bot
+    from tests.test_bot import FakeResolver, FakeTG, photo
+
+    from conquisterco.ingest import add_user as _au
+    a = _au(conn, "A")
+    conn.execute("""UPDATE users SET telegram_id='niente', selfie_visibility='niente',
+                    pulisci_chat=1 WHERE id=?""", (a,))
+    conn.commit()
+
+    tg = FakeTG()
+    bot.process_update(conn, photo(4, username="niente", mid=41), client=tg,
+                       resolver=FakeResolver(), media_dir=tmp_path)
+    assert [m for _, m in tg.cancellati] == [41]
+    assert conn.execute("SELECT COUNT(*) FROM tg_pending_photo").fetchone()[0] == 0
+
+
+def test_passare_a_ristretto_accende_la_pulizia_anche_senza_javascript(monkeypatch):
+    """Il server fa da se' quello che fa il javascript: chi passa a ristretto
+    si trova la pulizia accesa, altrimenti la foto resta in chat e la scelta
+    non serve a niente."""
+    from conquisterco.app import main
+    from conquisterco.db import fresh_db
+    from conquisterco.ingest import add_user as _au
+
+    conn = fresh_db(":memory:")
+    a = _au(conn, "A")
+
+    class Req:
+        session = {"uid": a, "role": "user", "name": "A"}
+
+    main.me_selfie_pref(Req(), livello="ristretto", ammessi=[], pulisci_chat=None, conn=conn)
+    r = conn.execute("SELECT selfie_visibility, pulisci_chat FROM users WHERE id=?", (a,)).fetchone()
+    assert r["selfie_visibility"] == "ristretto" and r["pulisci_chat"] == 1
+
+    # ma resta sbarrabile a mano una volta che sei gia' ristretto
+    main.me_selfie_pref(Req(), livello="ristretto", ammessi=[], pulisci_chat=None, conn=conn)
+    assert conn.execute("SELECT pulisci_chat FROM users WHERE id=?", (a,)).fetchone()[0] == 0
+    conn.close()
