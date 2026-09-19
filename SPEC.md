@@ -74,11 +74,18 @@ Tutti i coefficienti in `config.py` (default: comune 10 · 100 km² = 1 pt · ba
 segreti ×2). km² scalato per non schiacciare comuni e badge. Interamente **derivato e
 ricalcolabile**.
 
-**I badge danno sempre punti, anche i ripetibili presi più volte** — ma con **peso
-calante**: la n-esima presa dello stesso badge vale `punti · DECAY^(n-1)`. Con
-`SCORE_BADGE_DECAY = 0.5` la somma di un ripetibile grindato all'infinito converge a
-`punti/(1-DECAY)`, cioè il doppio di un one-shot: un badge facile ripetuto mille volte
-non sfonda la classifica, ma la presa numero mille qualcosa la vale ancora.
+**I badge danno sempre punti, anche i ripetibili presi più volte** — con **peso
+calante** e un **pavimento a metà**: la n-esima presa dello stesso badge vale
+`punti · DECAY^(n-1)`, e mai meno di `punti/2`. Con `SCORE_BADGE_DECAY = 0.5` la curva è
+**10, 5, 5, 5…** (e 20, 10, 10… per un segreto, dove il ×2 si applica al totale già
+decaduto). Con un DECAY più alto la discesa dal pieno alla metà è più morbida (0.8
+dà 10, 8, 6.4, 5.12, 5…): il parametro governa **la discesa**, non il valore finale.
+
+Il pavimento toglie il tetto, ed è voluto. Senza, con DECAY=0.5 la quinta presa valeva
+0,62 punti e la settantottesima zero: «danno sempre punti» era vero sulla carta e falso
+in pratica, e le 78 conquiste di comuni vergini del giocatore più attivo rendevano 20
+punti in tutto. Col pavimento ne rendono 395, e un ripetibile cresce senza limite di
+mezzo punto-badge per volta.
 
 Un badge può **dichiarare i suoi punti e il suo decadimento** nel registry
 (`@achievement(..., points=..., decay=...)`), e la coppia finisce in colonna nella

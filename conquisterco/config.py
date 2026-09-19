@@ -52,10 +52,14 @@ TRIP_WINDOW_DAYS = 5       # Fuck Brexit / Barbarossa / Cortina di carta igienic
 # score = PT_COMUNE·comuni + PT_KM2·km² + punti dei badge (i segreti ×MULT).
 # km² scalato così non schiaccia comuni e badge.
 #
-# I badge danno SEMPRE punti, anche i ripetibili presi più volte — ma con peso
-# calante: la n-esima presa dello stesso badge vale `punti · DECAY^(n-1)`. Con
-# DECAY=0.5 un ripetibile infinito non supera mai il doppio di un one-shot
-# (10+5+2.5+… → 20), quindi grindare un badge facile non sfonda la classifica.
+# I badge danno SEMPRE punti, anche i ripetibili presi più volte — con peso
+# calante, ma con un **pavimento a metà**: la n-esima presa vale
+# `punti · DECAY^(n-1)`, e mai meno di `punti/2`. Con DECAY=0.5 la curva è
+# 10, 5, 5, 5… (e 20, 10, 10… per un segreto); con un DECAY più alto la
+# discesa dal pieno alla metà è più morbida (0.8 → 10, 8, 6.4, 5.12, 5…).
+# Il pavimento toglie il tetto: un ripetibile cresce senza limite, mezzo
+# punto-badge per volta. È deliberato — senza, dalla quinta presa in poi
+# «danno sempre punti» era vero solo sulla carta.
 # Un badge può dichiarare i suoi punti e il suo decadimento nel registry
 # (`@achievement(..., points=…, decay=…)`): è così che Gnnn! vale 3 punti tondi
 # a ogni cacata, senza decadere.

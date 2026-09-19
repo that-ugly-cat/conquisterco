@@ -17,14 +17,32 @@ def _names(conn: sqlite3.Connection) -> dict[int, str]:
 
 
 def _decayed(points: float, decay: float, n: int) -> float:
-    """Valore di n prese dello stesso badge: points·(1 + d + d² + … + d^(n-1)).
-    d=1 → lineare (n prese, n volte i punti); d<1 → serie geometrica, che
-    converge a points/(1-d): un ripetibile grindato all'infinito resta finito."""
+    """Valore di n prese dello stesso badge.
+
+    La presa n-esima vale `points·decay^(n-1)`, **ma non scende mai sotto la
+    meta' dei punti base**: ripetere rende sempre qualcosa. Con decay=0.5 il
+    pavimento si tocca subito e la curva e' 10, 5, 5, 5…; con un decay piu' alto
+    la discesa dal pieno alla meta' e' graduale (con 0.8: 10, 8, 6.4, 5.12, 5…).
+    Il `decay` governa quindi la discesa, non il valore finale.
+
+    Niente tetto, di conseguenza: un ripetibile cresce all'infinito di meta'
+    punto-badge per volta. E' il prezzo di «i badge danno sempre punti».
+
+    Forma chiusa invece del ciclo perche' questa funzione gira dentro ogni
+    istantanea di punteggio, e le istantanee sono due per settimana su
+    quattrocento settimane.
+    """
     if n <= 0:
         return 0.0
     if decay >= 1.0:
-        return points * n
-    return points * (1.0 - decay ** n) / (1.0 - decay)
+        return points * n            # nessun calo: lineare (es. Gnnn!)
+    floor = points / 2.0
+    if decay <= 0.0:
+        return points + (n - 1) * floor
+    # quante prese stanno ancora sopra il pavimento: decay^i >= 1/2
+    import math
+    k = min(n, int(math.log(0.5) / math.log(decay)) + 1)
+    return points * (1.0 - decay ** k) / (1.0 - decay) + (n - k) * floor
 
 
 def badge_points(conn: sqlite3.Connection, until: str | None = None) -> dict[int, float]:

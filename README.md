@@ -28,8 +28,8 @@ in alto, trasferta più lontana…), oltre 50 achievement, e una mappa coropleti
 - **Punteggio** combinato (comuni · km² · badge, badge segreti ×2 — pesi in `config.py`)
   che ordina la **classifica**; colonna comuni/km² come tie-break. In classifica compare
   chiunque abbia giocato, con la **bandiera** del giocatore accanto al nome. I badge
-  danno **sempre** punti, anche i ripetibili presi più volte, con peso calante a ogni
-  ripetizione.
+  danno **sempre** punti, anche i ripetibili presi più volte: il valore cala a ogni
+  ripetizione ma non scende mai sotto metà del punteggio pieno.
 - **Settimane**: il recap della domenica chiude la settimana e ne scrive il verdetto, che
   poi non si ricalcola più. La vince chi ha guadagnato più **punti**, non chi ha cagato
   di più; parità = settimana contesa. Da lì una seconda classifica: **settimane vinte su

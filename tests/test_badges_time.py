@@ -227,3 +227,35 @@ def test_segreti_nascosti_dalla_legenda_ma_assegnati(conn, geo):
     awarded = {r["code"] for r in conn.execute(
         "SELECT a.code FROM awards w JOIN achievements a ON a.id=w.achievement_id")}
     assert "serenissima" in awarded                     # ma assegnato davvero
+
+
+def test_decadimento_ha_un_pavimento_a_meta():
+    """La presa ripetuta cala, ma non sotto meta' dei punti base: e' quello che
+    rende vero «i badge danno sempre punti» anche alla settantottesima."""
+    from conquisterco.leaderboards import _decayed
+
+    # con decay 0.5 il pavimento si tocca subito: 10, 5, 5, 5, ...
+    assert _decayed(10.0, 0.5, 1) == 10.0
+    assert _decayed(10.0, 0.5, 2) == 15.0
+    assert _decayed(10.0, 0.5, 3) == 20.0
+    assert _decayed(10.0, 0.5, 4) == 25.0
+    assert _decayed(10.0, 0.5, 78) == 10.0 + 77 * 5.0
+
+    # nessun tetto: la crescita e' lineare a regime
+    assert _decayed(10.0, 0.5, 200) - _decayed(10.0, 0.5, 199) == 5.0
+
+    # decay=1 resta lineare a punti pieni (Gnnn!), il pavimento non morde
+    assert _decayed(3.0, 1.0, 10) == 30.0
+
+
+def test_forma_chiusa_del_decadimento_regge_il_ciclo():
+    """La somma e' calcolata in forma chiusa perche' gira dentro ogni
+    istantanea: verificata contro il ciclo ingenuo, che e' ovviamente giusto."""
+    from conquisterco.leaderboards import _decayed
+
+    def ingenuo(p, d, n):
+        return sum(max(p * d ** i, p / 2.0) for i in range(n))
+
+    for d in (0.1, 0.3, 0.5, 0.7, 0.8, 0.9, 0.99):
+        for n in (1, 2, 3, 4, 5, 9, 17, 40, 78):
+            assert abs(_decayed(10.0, d, n) - ingenuo(10.0, d, n)) < 1e-9, (d, n)
