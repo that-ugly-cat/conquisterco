@@ -95,6 +95,8 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .vcell figcaption{display:flex;justify-content:space-between;align-items:center;gap:.4rem;padding:.35rem .5rem;font-size:.72rem}
 .undo{background:none;border:0;color:var(--accent);cursor:pointer;font-size:.7rem;text-decoration:underline;padding:0;white-space:nowrap}
 .nowrap{white-space:nowrap}
+.vis-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.1rem .6rem;margin-bottom:.5rem}
+.vis-avviso{font-size:.72rem;border-top:1px solid var(--line);padding-top:.5rem;margin-top:.6rem}
 .wk-sep td{font-size:.68rem;color:var(--muted);font-style:italic;padding-top:.6rem;border-top:1px solid var(--line)}
 /* La tabella delle settimane ha una colonna in piu' delle altre e sta nella
    stessa aside da 360px: senza questo il nome va a capo sotto la bandierina. */

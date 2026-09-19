@@ -427,6 +427,45 @@ o quando il bot non c'è.
 
 ---
 
+## 9bis. Visibilità dei selfie
+
+Il selfie è **l'unico dato del cacasto che riguarda una persona e non un territorio**,
+quindi è l'unico che ha bisogno di un permesso: pin, conquiste e punteggi sono pubblici
+per costruzione. Tre livelli, dichiarati dal proprietario nel profilo:
+
+| livello | il bot salva | chi vede sul sito |
+|---|---|---|
+| `pubblico` | sì | chiunque abbia un account |
+| `ristretto` | sì | il proprietario, gli admin, e una lista che sceglie |
+| `niente` | **no** | nessuno |
+
+`niente` prende il posto del vecchio flag `no_selfie`, che era la stessa domanda fatta
+due volte; la migrazione lo travasa e la colonna resta solo per non fare un `ALTER`
+distruttivo.
+
+**Il controllo sta in `visibilita.py` e in nessun altro posto**, perché un selfie esce da
+cinque superfici: la rotta che serve i byte, la galleria, i pin della mappa, i candidati
+al voto e la foto che il recap manda in chat. Sparpagliare la regola vuol dire
+dimenticarne una, e dimenticarne una qui significa pubblicare la foto di chi aveva
+chiesto di no. Il permesso **fallisce chiuso**: senza uno spettatore noto non si mostra
+niente.
+
+Due conseguenze volute, non effetti collaterali:
+
+- **Chi sta in `ristretto` è fuori dal voto della faccia di merda** (§6bis). Un selfie
+  ristretto messo ai voti sarebbe mostrato a tutti, e il vincitore verrebbe pure
+  ripubblicato in chat: la mezza misura qui non esiste. È il prezzo, ed è scritto
+  nell'interfaccia accanto alla scelta.
+- **Il pin resta visibile, sparisce solo la foto**, che diventa il coniglio 🐰 già usato
+  per i dump senza selfie. La posizione non è il dato protetto.
+
+> **Cosa NON copre, e va detto a chi lo usa.** I file stanno in chiaro sul volume `/data`,
+> finiscono nel backup off-site, e un admin del sito li vede tutti. «Ristretto» vuol dire
+> ristretto **fra i giocatori**, non cifrato. Chi ha bisogno che una foto non esista deve
+> usare `niente`. L'avviso è scritto sotto la scelta nel profilo, non solo qui.
+
+---
+
 ## 10. Casi limite / anti-cheat
 
 Contesto: amici, fiducia di base. Niente sistemi polizieschi.

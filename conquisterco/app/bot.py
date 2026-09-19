@@ -30,7 +30,7 @@ from ..elevation import enrich_altitude
 from ..enrich_osm import enrich_deposits_osm
 from ..ingest import add_deposit
 from ..pipeline import finalize
-from .. import faces, weeks
+from .. import faces, visibilita, weeks
 from ..util import is_video, parse_ts
 from . import data, triggers
 from .translations import TRANSLATIONS
@@ -242,8 +242,10 @@ def _within(a: str, b: str) -> bool:
 
 
 def _no_selfie(conn, uid: int) -> bool:
-    r = conn.execute("SELECT no_selfie FROM users WHERE id=?", (uid,)).fetchone()
-    return bool(r and r["no_selfie"])
+    """Il bot deve scartare il selfie di questo utente? Ora lo decide il
+    livello di visibilita' (`niente`), che ha preso il posto del vecchio
+    booleano `no_selfie`."""
+    return not visibilita.salva_i_selfie(conn, uid)
 
 
 def _unique_display(conn, base: str) -> str:
@@ -537,10 +539,14 @@ def _manda_selfie_proclamato(conn, eletto: dict, client, media_dir) -> bool:
     che e' la cosa che conta."""
     if not media_dir or not ALLOWED_CHAT:
         return False
-    row = conn.execute("SELECT photo_ref FROM deposits WHERE id=?",
+    row = conn.execute("SELECT photo_ref, user_id FROM deposits WHERE id=?",
                        (eletto["deposit_id"],)).fetchone()
     if row is None or not row["photo_ref"]:
         return False
+    if row["user_id"] not in visibilita.in_gara_al_voto(conn):
+        return False      # non dovrebbe mai capitare: i ristretti sono fuori dal
+                          # voto. Ma qui si ripubblica in chat una foto, e un
+                          # errore a monte non deve diventare una foto in chiaro.
     base = Path(media_dir).resolve()
     f = (base / row["photo_ref"]).resolve()
     if not str(f).startswith(str(base)) or not f.exists():

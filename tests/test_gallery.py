@@ -14,7 +14,7 @@ def test_gallery_progressivo_video_e_meta(conn, geo):
                 lat=cell.lat + 0.001, lon=cell.lon, source="telegram", photo_ref="clip.mp4")
     run_all(conn, geo)
 
-    g = data.gallery(conn, a)
+    g = data.gallery(conn, a, spettatore=a)
     first, second = g["dumps"]     # ordine DESC → il video (2 gen) è primo
     assert first["is_video"] is True and first["n"] == 2
     assert second["is_video"] is False and second["n"] == 1
@@ -22,3 +22,20 @@ def test_gallery_progressivo_video_e_meta(conn, geo):
     assert first["altitude"] is not None
     assert "lat" in first and "lon" in first
     assert first["comune"] == "Roma"
+
+
+def test_senza_spettatore_la_galleria_non_mostra_foto(conn, geo):
+    """Il permesso fallisce chiuso: se chi guarda non e' noto, le foto non si
+    vedono. Meglio un coniglio di troppo che una foto di troppo."""
+    a = add_user(conn, "A")
+    cell = CELLS[1012]
+    add_deposit(conn, user_id=a, ts="2026-01-01 10:00:00",
+                lat=cell.lat, lon=cell.lon, source="telegram", photo_ref="a.jpg")
+    run_all(conn, geo)
+
+    anonimo = data.gallery(conn, a)
+    assert anonimo["dumps"][0]["has_photo"] is False
+    assert anonimo["nascosti"] is True
+    suo = data.gallery(conn, a, spettatore=a)
+    assert suo["dumps"][0]["has_photo"] is True
+    assert suo["nascosti"] is False

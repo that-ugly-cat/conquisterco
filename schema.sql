@@ -22,7 +22,10 @@ CREATE TABLE users (
     flag_ref      TEXT,                         -- bandierina piantata sui comuni
     home_lat      REAL,                         -- home base (record "trasferta")
     home_lon      REAL,
-    no_selfie     INTEGER NOT NULL DEFAULT 0,    -- preferenza: il bot non salva i selfie
+    no_selfie     INTEGER NOT NULL DEFAULT 0,    -- STORICO: superato da selfie_visibility,
+                                                 -- resta per non fare una migrazione distruttiva
+    selfie_visibility TEXT NOT NULL DEFAULT 'pubblico'
+                      CHECK (selfie_visibility IN ('pubblico','ristretto','niente')),
     stitico       INTEGER NOT NULL DEFAULT 0,    -- autodichiarazione: ogni cacata vale un Gnnn!
     role          TEXT    NOT NULL DEFAULT 'user'
                           CHECK (role IN ('user', 'admin')),
@@ -126,6 +129,17 @@ CREATE TABLE achievements (
     decay        REAL    NOT NULL DEFAULT 0.5,  -- ratio fra prese successive    [dal registry]
     active       INTEGER NOT NULL DEFAULT 1
 );
+
+-- Chi puo' vedere i selfie di chi.                         [grezza]
+-- Serve solo a chi si mette in «ristretto»: una riga per ogni persona che il
+-- proprietario ammette. Il permesso e' del proprietario sul proprio archivio,
+-- quindi si cancella con lui.
+CREATE TABLE selfie_grants (
+    owner_user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    viewer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (owner_user_id, viewer_user_id)
+);
+CREATE INDEX idx_grants_viewer ON selfie_grants(viewer_user_id);
 
 -- Storia delle dichiarazioni di stitichezza.                [grezza]
 -- Non basta un booleano: il motore rivaluta sempre tutto lo storico, quindi un

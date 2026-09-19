@@ -24,6 +24,7 @@
     <h1><span class="swatch" style="background:{{ g.color or '#6F4E37' }}"></span>{{ g.name }} — {{ T.gallery }}
       <span class="muted" style="font-size:1rem;font-weight:400">{{ g.dumps | length }} 💩</span></h1>
 
+    {% if g.nascosti %}<p class="muted">{{ T.gal_nascosti }}</p>{% endif %}
     {% if g.dumps %}
     <div class="gallery-grid">
       {% for d in g.dumps %}

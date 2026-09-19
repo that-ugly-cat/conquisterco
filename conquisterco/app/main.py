@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from .. import config, faces, weeks
+from .. import config, faces, visibilita, weeks
 from ..db import connect, init_db
 from ..geo import FakeGeocoder
 from ..geo_osm import OSMResolver
@@ -73,6 +73,12 @@ def _migrate(conn) -> None:
     if "provisional" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN provisional INTEGER NOT NULL DEFAULT 0")
         conn.commit()
+    if "selfie_visibility" not in cols:
+        conn.execute("""ALTER TABLE users ADD COLUMN selfie_visibility TEXT
+                        NOT NULL DEFAULT 'pubblico'""")
+        # il vecchio booleano diventa il terzo livello: erano la stessa domanda
+        conn.execute("UPDATE users SET selfie_visibility='niente' WHERE no_selfie=1")
+        conn.commit()
     if "stitico" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN stitico INTEGER NOT NULL DEFAULT 0")
         conn.commit()
@@ -93,6 +99,11 @@ def _migrate(conn) -> None:
         code TEXT NOT NULL, ts TEXT NOT NULL, context TEXT,
         PRIMARY KEY (user_id, code))""")
     conn.commit()
+    conn.execute("""CREATE TABLE IF NOT EXISTS selfie_grants (
+        owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        viewer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        PRIMARY KEY (owner_user_id, viewer_user_id))""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_grants_viewer ON selfie_grants(viewer_user_id)")
     conn.execute("""CREATE TABLE IF NOT EXISTS stitico_periods (
         id INTEGER PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -275,7 +286,8 @@ def api_profile(user_id: int, request: Request, conn=Depends(get_db)):
 @app.get("/gallery/{user_id}", response_class=HTMLResponse)
 def gallery_page(user_id: int, request: Request, conn=Depends(get_db)):
     require_login(request)   # foto = dato sensibile, come i pin dump
-    g = data.gallery(conn, user_id)
+    g = data.gallery(conn, user_id, spettatore=request.session.get("uid"),
+                     admin=is_admin(request))
     if g is None:
         raise HTTPException(status_code=404, detail="giocatore non trovato")
     return templates.TemplateResponse(request, "gallery.html", _ctx(
@@ -287,14 +299,20 @@ def gallery_page(user_id: int, request: Request, conn=Depends(get_db)):
 @app.get("/api/map/dumps")
 def api_dumps(request: Request, conn=Depends(get_db)):
     require_login(request)
-    return data.dumps_geo(conn)
+    return data.dumps_geo(conn, request.session.get("uid"), admin=is_admin(request))
 
 
 @app.get("/api/selfie/{deposit_id}")
 def api_selfie(deposit_id: int, request: Request, conn=Depends(get_db)):
     require_login(request)
-    row = conn.execute("SELECT photo_ref FROM deposits WHERE id=?", (deposit_id,)).fetchone()
+    row = conn.execute("SELECT photo_ref, user_id FROM deposits WHERE id=?",
+                       (deposit_id,)).fetchone()
     if row is None or not row["photo_ref"]:
+        raise HTTPException(status_code=404, detail="nessun selfie")
+    if not visibilita.puo_vedere(conn, request.session.get("uid"), row["user_id"],
+                                 admin=is_admin(request)):
+        # 404 e non 403: chi non può vedere la foto non ha motivo di sapere
+        # che esiste, e la rotta dice già "nessun selfie" quando manca davvero
         raise HTTPException(status_code=404, detail="nessun selfie")
     path = (MEDIA_DIR / row["photo_ref"]).resolve()
     # difesa da path traversal: deve restare dentro MEDIA_DIR
@@ -399,10 +417,18 @@ def me_telegram_link(request: Request, conn=Depends(get_db)):
 
 
 @app.post("/me/selfies")
-def me_selfie_pref(request: Request, no_selfie: str = Form(None), conn=Depends(get_db)):
+def me_selfie_pref(request: Request, livello: str = Form("pubblico"),
+                   ammessi: list[int] = Form(default=[]), conn=Depends(get_db)):
+    """Tre livelli piu' la lista di chi è ammesso. La lista si salva anche
+    quando il livello non è «ristretto»: così chi torna pubblico e poi cambia
+    idea non deve rifarla da capo."""
     require_login(request)
-    conn.execute("UPDATE users SET no_selfie=? WHERE id=?",
-                 (1 if no_selfie else 0, request.session["uid"]))
+    if livello not in visibilita.LIVELLI:
+        livello = visibilita.PUBBLICO
+    uid = request.session["uid"]
+    conn.execute("UPDATE users SET selfie_visibility=?, no_selfie=? WHERE id=?",
+                 (livello, 1 if livello == visibilita.NIENTE else 0, uid))
+    visibilita.imposta_ammessi(conn, uid, ammessi)
     conn.commit()
     return RedirectResponse("/me", status_code=303)
 

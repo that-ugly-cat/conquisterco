@@ -13,7 +13,7 @@ AVG_DUMP_G = 128
 from ..leaderboards import _streaks, main_leaderboard, records
 from ..recompute import owner_of
 from ..util import is_video
-from .. import config, weeks
+from .. import config, visibilita, weeks
 
 _RECORD_LABELS = {
     "nord": "Più a Nord", "sud": "Più a Sud", "est": "Più a Est", "ovest": "Più a Ovest",
@@ -178,9 +178,17 @@ def _aggregate_areas(conn: sqlite3.Connection, level: str, users: dict) -> list[
     return out
 
 
-def dumps_geo(conn: sqlite3.Connection) -> list[dict]:
-    """Singoli depositi (GATED: solo utenti loggati)."""
+def dumps_geo(conn: sqlite3.Connection, spettatore: int | None = None,
+              *, admin: bool = False) -> list[dict]:
+    """Singoli depositi (GATED: solo utenti loggati).
+
+    Il pin si vede sempre — la posizione non è il dato protetto — ma la foto
+    di chi si è messo in «ristretto» diventa `has_photo: False` per chi non è
+    ammesso, cioè il coniglio 🐰 che l'interfaccia usa già per i dump senza
+    selfie. Niente elemento nuovo: c'era già il modo di dire «qui foto non ce
+    n'è»."""
     users = _names(conn)
+    visibili = visibilita.proprietari_visibili(conn, spettatore, admin=admin)
     out = []
     for r in conn.execute(
         """SELECT id, user_id, ts, lat, lon, altitude, photo_ref, territory_osm_id
@@ -192,8 +200,8 @@ def dumps_geo(conn: sqlite3.Connection) -> list[dict]:
             "color": u["color"] if u else "#888",
             "ts": r["ts"], "lat": r["lat"], "lon": r["lon"],
             "altitude": r["altitude"],
-            "has_photo": r["photo_ref"] is not None,  # False → placeholder coniglio
-            "is_video": _is_video(r["photo_ref"]),
+            "has_photo": r["photo_ref"] is not None and r["user_id"] in visibili,
+            "is_video": _is_video(r["photo_ref"]) and r["user_id"] in visibili,
         })
     return out
 
@@ -400,7 +408,12 @@ def my_stats(conn: sqlite3.Connection, uid: int, t: dict | None = None) -> dict 
         "badges": prof["badges"], "records": held,
         "activity": monthly_activity(conn, uid),
         "weight_kg": round(c["tot"] * AVG_DUMP_G / 1000.0, 1),
-        "no_selfie": bool(u["no_selfie"]),
+        "no_selfie": bool(u["no_selfie"]),   # storico, non piu' letto dal bot
+        "visibilita": u["selfie_visibility"] or visibilita.PUBBLICO,
+        "ammessi": visibilita.ammessi(conn, uid),
+        "altri": [{"id": r["id"], "name": r["name"]} for r in conn.execute(
+            """SELECT id, COALESCE(public_name, display_name) AS name FROM users
+               WHERE id != ? ORDER BY name""", (uid,))],
         "stitico": bool(u["stitico"]),
         "stitico_since": (conn.execute(
             """SELECT MIN(from_ts) AS f FROM stitico_periods
@@ -482,15 +495,18 @@ def delete_user(conn: sqlite3.Connection, uid: int, media_dir) -> None:
 _is_video = is_video   # alias storico: la funzione vive in util (serve anche al voto)
 
 
-def gallery(conn: sqlite3.Connection, user_id: int, limit: int = 1000) -> dict | None:
+def gallery(conn: sqlite3.Connection, user_id: int, limit: int = 1000,
+            *, spettatore: int | None = None, admin: bool = False) -> dict | None:
     """Cacate di un utente in ordine temporale (più recenti prima). `n` è il
     numero progressivo cronologico (1 = la prima in assoluto)."""
     u = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
     if u is None:
         return None
+    # la galleria resta navigabile (date, comuni, quote): sparisce la foto
+    vedo = user_id in visibilita.proprietari_visibili(conn, spettatore, admin=admin)
     dumps = [
-        {"id": r["id"], "ts": r["ts"], "has_photo": r["photo_ref"] is not None,
-         "is_video": _is_video(r["photo_ref"]), "comune": r["cname"],
+        {"id": r["id"], "ts": r["ts"], "has_photo": r["photo_ref"] is not None and vedo,
+         "is_video": _is_video(r["photo_ref"]) and vedo, "comune": r["cname"],
          "n": r["n"], "altitude": r["altitude"], "lat": r["lat"], "lon": r["lon"]}
         for r in conn.execute(
             """SELECT d.id, d.ts, d.photo_ref, d.altitude, d.lat, d.lon, t.name AS cname,
@@ -498,7 +514,8 @@ def gallery(conn: sqlite3.Connection, user_id: int, limit: int = 1000) -> dict |
                FROM deposits d LEFT JOIN territories t ON t.osm_id = d.territory_osm_id
                WHERE d.user_id=? ORDER BY d.ts DESC LIMIT ?""", (user_id, limit))
     ]
-    return {"id": u["id"], "name": _pub(u), "color": u["color"], "dumps": dumps}
+    return {"id": u["id"], "name": _pub(u), "color": u["color"], "dumps": dumps,
+            "nascosti": not vedo}
 
 
 def list_users(conn: sqlite3.Connection) -> list[dict]:

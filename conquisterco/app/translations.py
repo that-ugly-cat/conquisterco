@@ -115,6 +115,16 @@ TRANSLATIONS = {
         "selfie": "Selfie",
         "no_selfie_pref": "Non salvare i miei selfie",
         "no_selfie_bot": "(il bot non li terrà)",
+        # visibilita' dei selfie
+        "vis_pubblico": "Pubblici",
+        "vis_pubblico_d": "(li vede chiunque abbia un account)",
+        "vis_ristretto": "Ristretti",
+        "vis_ristretto_d": "(solo io, gli admin e chi scelgo qui sotto — e sei fuori dal voto della faccia di merda)",
+        "vis_niente": "Non salvarli",
+        "vis_niente_d": "(il bot butta via la foto appena arriva)",
+        "vis_chi": "Chi può vedere i miei selfie, se sono ristretti:",
+        "vis_avviso": "Nota: «ristretti» vuol dire ristretti fra i giocatori. I file restano in chiaro sul server, finiscono nei backup, e un admin li vede comunque. Se una foto non deve esistere, usa «non salvarli».",
+        "gal_nascosti": "Le foto di questo giocatore sono ristrette: vedi le cacate ma non i selfie.",
         # stitici
         "stitico_pref": "Sono stitico",
         "stitico_hint": "(ogni cacata ti frutta un Gnnn!, da adesso in poi)",
@@ -352,6 +362,16 @@ TRANSLATIONS = {
         "selfie": "Selfies",
         "no_selfie_pref": "Don't save my selfies",
         "no_selfie_bot": "(the bot won't keep them)",
+        # selfie visibility
+        "vis_pubblico": "Public",
+        "vis_pubblico_d": "(anyone with an account can see them)",
+        "vis_ristretto": "Restricted",
+        "vis_ristretto_d": "(only me, the admins and whoever I pick below — and you're out of the shit-face vote)",
+        "vis_niente": "Don't save them",
+        "vis_niente_d": "(the bot discards the photo on arrival)",
+        "vis_chi": "Who can see my selfies, when restricted:",
+        "vis_avviso": "Note: \"restricted\" means restricted among players. The files sit in the clear on the server, end up in backups, and an admin sees them anyway. If a photo must not exist, use \"don't save them\".",
+        "gal_nascosti": "This player's photos are restricted: you see the dumps but not the selfies.",
         # constipated
         "stitico_pref": "I'm constipated",
         "stitico_hint": "(every dump earns you a Gnnn!, from now on)",

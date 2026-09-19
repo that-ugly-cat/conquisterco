@@ -112,9 +112,11 @@ def test_deeplink_fonde_il_provvisorio(tmp_path):
 
 
 def test_no_selfie_scarta_la_foto(tmp_path):
+    """Livello «niente»: il bot non salva proprio il selfie. Era il vecchio
+    flag `no_selfie`, ora e' il terzo livello di `selfie_visibility`."""
     conn = fresh_db(":memory:")
     a = mkuser(conn, "S")
-    conn.execute("UPDATE users SET telegram_id='ng', no_selfie=1 WHERE id=?", (a,))
+    conn.execute("UPDATE users SET telegram_id='ng', selfie_visibility='niente' WHERE id=?", (a,))
     conn.commit()
     run(conn, loc(1, username="ng"), tmp_path)
     run(conn, photo(1, date=1030, username="ng"), tmp_path)

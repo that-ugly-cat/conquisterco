@@ -112,9 +112,26 @@
       <section class="card">
         <h2>{{ T.selfie }}</h2>
         <form method="post" action="/me/selfies" class="stacked">
-          <label class="chk"><input type="checkbox" name="no_selfie" {% if s.no_selfie %}checked{% endif %}> {{ T.no_selfie_pref }} <span class="muted">{{ T.no_selfie_bot }}</span></label>
+          <label class="chk"><input type="radio" name="livello" value="pubblico"
+            {% if s.visibilita == 'pubblico' %}checked{% endif %}>
+            {{ T.vis_pubblico }} <span class="muted">{{ T.vis_pubblico_d }}</span></label>
+          <label class="chk"><input type="radio" name="livello" value="ristretto"
+            {% if s.visibilita == 'ristretto' %}checked{% endif %}>
+            {{ T.vis_ristretto }} <span class="muted">{{ T.vis_ristretto_d }}</span></label>
+          <label class="chk"><input type="radio" name="livello" value="niente"
+            {% if s.visibilita == 'niente' %}checked{% endif %}>
+            {{ T.vis_niente }} <span class="muted">{{ T.vis_niente_d }}</span></label>
+
+          <p class="muted" style="margin:.5rem 0 .2rem">{{ T.vis_chi }}</p>
+          <div class="vis-lista">
+            {% for u in s.altri %}
+            <label class="chk"><input type="checkbox" name="ammessi" value="{{ u.id }}"
+              {% if u.id in s.ammessi %}checked{% endif %}> {{ u.name }}</label>
+            {% endfor %}
+          </div>
           <button>{{ T.save_pref }}</button>
         </form>
+        <p class="muted vis-avviso">{{ T.vis_avviso }}</p>
         <hr>
         <p class="muted">{{ T.selfie_have.replace('{n}', s.selfie_count | string) }}</p>
         <form method="post" action="/me/selfies/delete" onsubmit="return confirm('{{ T.del_selfies_confirm }}')">

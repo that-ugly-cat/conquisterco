@@ -19,7 +19,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from . import config
+from . import config, visibilita
 from .util import is_video
 
 
@@ -58,7 +58,10 @@ def candidates(conn: sqlite3.Connection, week_id: int, voter_id: int | None = No
         (week_id, voter_id, w["start_ts"], w["end_ts"])).fetchall()
     out = []
     base = Path(media_dir).resolve() if media_dir else None
+    in_gara = visibilita.in_gara_al_voto(conn)
     for r in rows:
+        if r["user_id"] not in in_gara:
+            continue      # selfie ristretto: fuori dal voto (vedi visibilita.py)
         if not config.FACE_SELF_VOTE and voter_id is not None and r["user_id"] == voter_id:
             continue      # i propri selfie non si votano: non compaiono proprio
         if base is not None:
@@ -80,6 +83,8 @@ def _eligible(conn: sqlite3.Connection, week_id: int, deposit_id: int, voter_id:
         (week_id, deposit_id)).fetchone()
     if r is None:
         return False
+    if r["user_id"] not in visibilita.in_gara_al_voto(conn):
+        return False      # non basta nasconderlo: il voto va anche rifiutato
     return config.FACE_SELF_VOTE or r["user_id"] != voter_id
 
 
