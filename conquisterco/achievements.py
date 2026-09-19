@@ -49,7 +49,7 @@ def achievement(code: str, name: str, description: str, *,
                 secret: bool = False, manual: bool = False,
                 points: float | None = None, decay: float | None = None):
     """`points`/`decay` sovrascrivono i default di config per QUESTO badge: e'
-    la deroga che serve a un ripetibile a valore fisso (Gnnn!, 3 punti tondi a
+    la deroga che serve a un ripetibile a valore fisso (Gnnn!, punti tondi a
     ogni cacata) dentro un sistema che altrimenti fa calare le prese ripetute."""
     def deco(fn: Callable[["EvalContext"], list[Award]]):
         if code in REGISTRY:
@@ -900,8 +900,8 @@ def _teano(ctx: EvalContext) -> list[Award]:
              icon="😫", points=config.GNNN_POINTS, decay=1.0)
 def _gnnn(ctx: EvalContext) -> list[Award]:
     """Un Gnnn! per ogni deposito fatto MENTRE eri dichiarato stitico.
-    Punti fissi e nessun decadimento (config.GNNN_POINTS): è l'handicap, e un
-    handicap che si sgonfia dopo tre giorni non è un handicap."""
+    Punti fissi e nessun decadimento (config.GNNN_POINTS): è un incentivo a
+    cagare, e un incentivo che si sgonfia dopo tre giorni non incentiva niente."""
     out = []
     for uid, periods in ctx.stitico_periods.items():
         for d in ctx.deposits_by_user.get(uid, []):

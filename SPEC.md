@@ -169,8 +169,11 @@ Soglie e finestre in `config.py`.
 ### Gnnn! — il badge degli stitici
 
 Dal profilo ci si può **dichiarare stitici**. Da quel momento ogni cacata frutta un
-**Gnnn!** (`GNNN_POINTS` punti, nessun decadimento): è un handicap dichiarato, per chi
-gioca a frequenza bassa e non può competere sul volume.
+**Gnnn!** (`GNNN_POINTS` punti, nessun decadimento). Non è un handicap ma un **incentivo**:
+paga in proporzione a quante volte caghi, e va bene così perché lo scopo è far cagare di
+più. Il valore è stato scelto simulando sulle 443 settimane di storico — a tre punti il
+bonus ribaltava 5 settimane su 59 alla giocatrice piu' assidua fra le stitiche, a quattro
+ne ribaltava 6 (il quarto punto non comprava niente), a cinque ne ribalta 9.
 
 La dichiarazione **non è un booleano ma una storia**: `stitico_periods` tiene i periodi
 in cui valeva, e Gnnn! premia i depositi caduti dentro. Serve perché il motore rivaluta

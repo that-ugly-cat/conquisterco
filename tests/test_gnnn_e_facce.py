@@ -54,8 +54,8 @@ def test_gnnn_sopravvive_a_spegnere_il_flag(conn, geo):
     assert len(got) == 1 and got[0].ts_earned.startswith("2026-06-01")
 
 
-def test_gnnn_non_decade_e_vale_tre(conn, geo):
-    """L'handicap e' a valore fisso: la decima cacata vale come la prima."""
+def test_gnnn_non_decade_mai(conn, geo):
+    """L'incentivo e' a valore fisso: la decima cacata vale come la prima."""
     from conquisterco.achievements import REGISTRY
     from conquisterco.leaderboards import _decayed
     assert REGISTRY["gnnn"].points == config.GNNN_POINTS

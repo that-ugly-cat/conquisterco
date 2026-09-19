@@ -65,7 +65,7 @@ TRIP_WINDOW_DAYS = 5       # Fuck Brexit / Barbarossa / Cortina di carta igienic
 # punto-badge per volta. È deliberato — senza, dalla quinta presa in poi
 # «danno sempre punti» era vero solo sulla carta.
 # Un badge può dichiarare i suoi punti e il suo decadimento nel registry
-# (`@achievement(..., points=…, decay=…)`): è così che Gnnn! vale 3 punti tondi
+# (`@achievement(..., points=…, decay=…)`): è così che Gnnn! vale punti tondi
 # a ogni cacata, senza decadere.
 SCORE_PT_COMUNE = 10.0     # punti per comune posseduto
 SCORE_PT_KM2 = 0.01        # punti per km² (→ 100 km² = 1 punto)
@@ -74,7 +74,12 @@ SCORE_BADGE_DECAY = 0.5    # ratio di decadimento fra una presa e la successiva
 SCORE_SECRET_MULT = 2      # i badge segreti valgono doppio
 
 # --- Stitici ---------------------------------------------------------------
-GNNN_POINTS = 3.0          # punti di ogni Gnnn! (niente decadimento)
+# Cinque e non tre: simulato il 19 set 2026 sulle 443 settimane di storico, con
+# tre punti il bonus ribaltava 5 settimane su 59 ad Angela_B e con quattro ne
+# ribaltava 6 — il quarto punto non comprava niente. A cinque diventano 9.
+# Non e' un handicap ma un incentivo (decisione di Spit): premia la frequenza, e
+# va bene così, perche' lo scopo dichiarato e' far cagare di piu'.
+GNNN_POINTS = 5.0          # punti di ogni Gnnn! (niente decadimento)
 
 # --- Settimane -------------------------------------------------------------
 # La settimana la chiude il recap. Sotto questa durata non si chiude niente:
