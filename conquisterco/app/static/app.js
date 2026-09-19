@@ -180,7 +180,7 @@ async function loadPanels() {
       + `<span class="player-link" onclick="showProfile(${row.user_id})">${esc(row.name)}</span></td>`
       + `<td class="num"><b>${row.score}</b></td><td class="num">${row.comuni}</td><td class="num">${row.km2}</td></tr>`;
   });
-  $("#tab-classifica").innerHTML = h + "</table>";
+  $("#tab-punti").innerHTML = h + "</table>";
 
   // settimane vinte: il rateo da solo mente (una su una fa 1.00), quindi
   // "giocate" sta sempre in tabella accanto.

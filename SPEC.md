@@ -54,6 +54,10 @@ tocchiamo lo storico: rigiriamo il motore.
 
 ## 4. Leaderboard principale — controllo territori
 
+> **Nomi in interfaccia (19 set 2026):** in dashboard questa è la tab **Punti**, seconda;
+> la prima si chiama **Classifica** ed è quella per settimane vinte (§6bis). L'ordine dice
+> qual è il piatto forte: vincere settimane, non accumulare punteggio.
+
 Ordinata per **Punteggio**, con comuni e km² come colonne e tie-break:
 
 1. **Punteggio** (metrica canonica di sintesi)

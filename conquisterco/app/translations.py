@@ -28,7 +28,8 @@ TRANSLATIONS = {
         # mappa: modalità e tab
         "mode_territories": "Territori",
         "mode_dump": "Dump",
-        "tab_ranking": "Classifica",
+        "tab_weeks": "Classifica",     # settimane vinte: e' LA classifica
+        "tab_ranking": "Punti",        # la somma pesata, seconda
         "tab_records": "Record",
         "tab_feed": "Feed",
         "tab_badges": "Badge",
@@ -128,7 +129,6 @@ TRANSLATIONS = {
         "vote_of": "di",
         "btn_vote": "vota",
         # settimane
-        "weeks_title": "Settimane vinte",
         "weeks_won": "vinte",
         "weeks_played": "giocate",
         "weeks_ratio": "rateo",
@@ -270,7 +270,8 @@ TRANSLATIONS = {
         "tag_privacy": "privacy",
         "mode_territories": "Territories",
         "mode_dump": "Dumps",
-        "tab_ranking": "Ranking",
+        "tab_weeks": "Ranking",
+        "tab_ranking": "Points",
         "tab_records": "Records",
         "tab_feed": "Feed",
         "tab_badges": "Badges",
@@ -363,7 +364,6 @@ TRANSLATIONS = {
         "vote_of": "by",
         "btn_vote": "vote",
         # weeks
-        "weeks_title": "Weeks won",
         "weeks_won": "won",
         "weeks_played": "played",
         "weeks_ratio": "ratio",
