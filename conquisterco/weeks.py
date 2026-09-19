@@ -109,13 +109,23 @@ def _first_deposit_ts(conn: sqlite3.Connection) -> str | None:
     return r["t"] if r and r["t"] else None
 
 
-def _record(conn: sqlite3.Connection, start_ts: str, end_ts: str, now: str) -> dict:
+def _record(conn: sqlite3.Connection, start_ts: str, end_ts: str, now: str,
+            *, apre_voto: bool) -> dict:
+    """Scrive il verdetto di una settimana.
+
+    `apre_voto` decide se la faccia di merda si puo' votare. Solo il recap lo
+    passa vero, perche' e' il recap a mandare il link al gruppo: una settimana
+    chiusa retroattivamente nasce **gia' votata e chiusa**, altrimenti il
+    backfill dello storico aprirebbe in silenzio un voto su selfie di cui
+    nessuno sa niente — e' successo davvero il 19 set 2026, 67 selfie in gara
+    su una settimana mai annunciata."""
     g = gains(conn, start_ts, end_ts)
     win, contested = _winner(g)
     cur = conn.execute(
-        """INSERT INTO weeks (start_ts, end_ts, closed_at, winner_user_id, contested)
-           VALUES (?,?,?,?,?)""",
-        (start_ts, end_ts, now, win, int(contested)))
+        """INSERT INTO weeks (start_ts, end_ts, closed_at, winner_user_id, contested,
+                              face_closed_at)
+           VALUES (?,?,?,?,?,?)""",
+        (start_ts, end_ts, now, win, int(contested), None if apre_voto else now))
     return {"id": cur.lastrowid, "start_ts": start_ts, "end_ts": end_ts,
             "winner_user_id": win, "contested": contested, "gains": g}
 
@@ -128,7 +138,8 @@ def close_due_weeks(conn: sqlite3.Connection, *, closing_now: bool = False,
     - le settimane **scadute** (griglia dei lunedì, ormai vecchie di oltre un
       giorno) si chiudono retroattivamente: è così che entra tutto lo storico;
     - con `closing_now` (lo passa il recap) si chiude anche la settimana in
-      corso, che finisce nell'istante del recap. Sotto MIN_WEEK_DAYS non si
+      corso, che finisce nell'istante del recap ed e' **l'unica** ad aprire il
+      voto per la faccia di merda. Sotto MIN_WEEK_DAYS non si
       chiude: due `conquisterco-recap` nello stesso giorno non devono
       fabbricare una settimana di due ore.
     """
@@ -148,11 +159,11 @@ def close_due_weeks(conn: sqlite3.Connection, *, closing_now: bool = False,
         if nxt > now - timedelta(days=1):
             break
         end = fmt_ts(nxt)
-        closed.append(_record(conn, start, end, now_s))
+        closed.append(_record(conn, start, end, now_s, apre_voto=False))
         start = end
     # 2. la settimana in corso, se è il recap a chiedercelo
     if closing_now and (now - parse_ts(start)) >= timedelta(days=config.MIN_WEEK_DAYS):
-        closed.append(_record(conn, start, now_s, now_s))
+        closed.append(_record(conn, start, now_s, now_s, apre_voto=True))
     conn.commit()
     return closed
 

@@ -161,3 +161,26 @@ def test_selfie_con_file_sparito_e_fuori_gara(conn, geo, tmp_path):
     con_controllo = [c["id"] for c in faces.candidates(conn, week["id"], a, tmp_path)]
     assert db in senza_controllo          # il DB non sa che il file non c'e'
     assert db not in con_controllo        # il filesystem si'
+
+
+def test_il_backfill_non_apre_voti_di_nascosto(conn, geo):
+    """Una settimana chiusa retroattivamente nasce col voto gia' chiuso: il
+    link lo manda il recap, e senza recap non c'e' niente da votare."""
+    a = add_user(conn, "A")
+    now = datetime.now()
+    for w in (4, 3, 2):
+        dep(conn, a, 1012, _ts(now - timedelta(weeks=w)))
+    run_all(conn, geo)
+
+    arretrate = weeks.close_due_weeks(conn)          # solo storico, nessun recap
+    assert len(arretrate) >= 3
+    assert faces.open_vote_week(conn) is None
+    assert conn.execute(
+        "SELECT COUNT(*) FROM weeks WHERE face_closed_at IS NULL").fetchone()[0] == 0
+
+    # il recap invece apre il voto sulla settimana che chiude lui
+    dep(conn, a, 1005, _ts(now - timedelta(hours=3)))
+    run_all(conn, geo)
+    corrente = weeks.close_due_weeks(conn, closing_now=True)[-1]
+    aperta = faces.open_vote_week(conn)
+    assert aperta is not None and aperta["id"] == corrente["id"]
