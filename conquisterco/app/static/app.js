@@ -210,7 +210,7 @@ async function loadPanels() {
         : `<span class="swatch" style="background:${esc(row.color || '#6F4E37')}"></span>`;
       w += `<tr${row.ranked ? "" : ' class="muted"'}>`
         + `<td>${row.ranked ? ++pos : "—"}</td>`
-        + `<td>${faccia}<span class="player-link" onclick="showProfile(${row.user_id})">${esc(row.name)}</span></td>`
+        + `<td class="wk-name">${faccia}<span class="player-link" onclick="showProfile(${row.user_id})">${esc(row.name)}</span></td>`
         + `<td class="num">${row.ranked ? "<b>" + row.ratio.toFixed(2) + "</b>" : "—"}</td>`
         + `<td class="num">${row.won}</td><td class="num">${row.played}</td>`
         + `<td class="num">${row.recent}</td></tr>`;

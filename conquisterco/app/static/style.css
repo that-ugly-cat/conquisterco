@@ -96,6 +96,13 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .undo{background:none;border:0;color:var(--accent);cursor:pointer;font-size:.7rem;text-decoration:underline;padding:0;white-space:nowrap}
 .nowrap{white-space:nowrap}
 .wk-sep td{font-size:.68rem;color:var(--muted);font-style:italic;padding-top:.6rem;border-top:1px solid var(--line)}
+/* La tabella delle settimane ha una colonna in piu' delle altre e sta nella
+   stessa aside da 360px: senza questo il nome va a capo sotto la bandierina. */
+#tab-settimane table{font-size:.78rem}
+#tab-settimane td,#tab-settimane th{padding:.28rem .2rem}
+#tab-settimane .wk-name{white-space:nowrap}
+#tab-settimane .swatch{margin-right:.25rem}
+#tab-settimane .lb-flag{width:.95rem;height:.95rem;margin-right:.25rem}
 
 @media(max-width:680px){
   .prof-grid{grid-template-columns:1fr}
