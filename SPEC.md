@@ -262,7 +262,8 @@ graduatoria **non vuol dire fuori dalla lista** — si compare in coda, con posi
 rateo a trattino ma vinte e giocate vere, ordinati per quanto manca a entrarci. Il
 principio è quello della classifica principale (§4): chi ha giocato compare. E la colonna
 `giocate` resta **sempre** accanto al rateo, perché la soglia riduce il rumore, non lo
-azzera — con `WEEKS_MIN_PLAYED = 5` il primo in graduatoria sui dati veri ha 8 settimane.
+azzera: con `WEEKS_MIN_PLAYED = 8` entrano in graduatoria dodici giocatori su diciotto,
+e il più leggero ci sta appena dentro.
 
 ### Faccia di merda della settimana
 

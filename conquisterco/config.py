@@ -79,7 +79,7 @@ MIN_WEEK_DAYS = 3
 # Chi non ci arriva NON sparisce, compare sotto la tabella: la classifica
 # principale include deliberatamente chiunque abbia giocato (SS4), e nasconderli
 # qui la contraddirebbe.
-WEEKS_MIN_PLAYED = 5
+WEEKS_MIN_PLAYED = 8
 
 # --- Faccia di merda della settimana ---------------------------------------
 # Un selfie vale la SOMMA dei voti presi, non la media: vince chi raccoglie piu'
