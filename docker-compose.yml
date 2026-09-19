@@ -1,5 +1,6 @@
 services:
   conquisterco:
+    container_name: conquisterco
     build: .
     image: conquisterco
     restart: always
