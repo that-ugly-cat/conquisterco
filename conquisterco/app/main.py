@@ -491,14 +491,23 @@ def media_flag(uid: int, conn=Depends(get_db)):
 
 # --- Admin (gestione utenti) ----------------------------------------------
 
+def _admin_view(request: Request, conn, *, sent: str = "", perche: str = "",
+                bozza: str = ""):
+    """Rende il pannello. `bozza` ripopola la casella del messaggio: dopo un
+    invio fallito il testo deve tornare indietro, non sparire — il 19 set 2026
+    un annuncio di cinquemila caratteri e' andato perso così, per un rifiuto
+    di Telegram e un redirect."""
+    return templates.TemplateResponse(request, "admin.html", _ctx(
+        request, users=data.list_users(conn), me=request.session.get("name"),
+        bot_ok=bot.bot_enabled(), sent=sent, perche=perche, bozza=bozza,
+        manual_badges=data.manual_badges(conn),
+        manual_assignments=data.manual_assignments(conn)))
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page(request: Request, sent: str = "", perche: str = "", conn=Depends(get_db)):
     require_admin(request)
-    return templates.TemplateResponse(request, "admin.html", _ctx(
-        request, users=data.list_users(conn), me=request.session.get("name"),
-        bot_ok=bot.bot_enabled(), sent=sent, perche=perche,
-        manual_badges=data.manual_badges(conn),
-        manual_assignments=data.manual_assignments(conn)))
+    return _admin_view(request, conn, sent=sent, perche=perche)
 
 
 @app.post("/admin/badge")
@@ -521,9 +530,13 @@ def admin_broadcast(request: Request, message: str = Form(""), conn=Depends(get_
     if not bot.bot_enabled():
         return RedirectResponse("/admin?sent=off", status_code=303)
     ok, motivo = bot.broadcast(text)
-    q = urllib.parse.quote(motivo or "")
-    return RedirectResponse(f"/admin?sent={'ok' if ok else 'fail'}&perche={q}",
-                            status_code=303)
+    if ok:
+        q = urllib.parse.quote(motivo or "")
+        return RedirectResponse(f"/admin?sent=ok&perche={q}", status_code=303)
+    # fallito: si rende la pagina qui invece di rimbalzare, così il testo torna
+    # nella casella. Un redirect lo butterebbe via, e riscrivere un annuncio
+    # lungo perché il bot ha detto no e' una punizione sproporzionata.
+    return _admin_view(request, conn, sent="fail", perche=motivo, bozza=text)
 
 
 @app.post("/admin/create")

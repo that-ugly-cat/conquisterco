@@ -30,7 +30,7 @@
     {% if bot_ok %}
     <form method="post" action="/admin/broadcast" class="admin-bc"
           onsubmit="return confirm('{{ T.adm_bc_confirm }}')">
-      <textarea name="message" rows="3" placeholder="{{ T.adm_bc_ph }}" required></textarea>
+      <textarea name="message" rows="3" placeholder="{{ T.adm_bc_ph }}" required>{{ bozza or '' }}</textarea>
       <button>{{ T.adm_bc_btn }}</button>
     </form>
     {% else %}
