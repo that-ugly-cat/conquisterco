@@ -33,8 +33,9 @@ in alto, trasferta più lontana…), oltre 50 achievement, e una mappa coropleti
 - **Settimane**: il recap della domenica chiude la settimana e ne scrive il verdetto, che
   poi non si ricalcola più. La vince chi ha guadagnato più **punti**, non chi ha cagato
   di più; parità = settimana contesa. Da lì una seconda classifica: **settimane vinte su
-  settimane giocate**, con una soglia minima di settimane giocate per entrare in
-  graduatoria (chi non ci arriva compare comunque, in coda).
+  settimane giocate**, con due soglie per entrare in graduatoria — un
+  minimo di settimane giocate e un minimo di cacate recenti, così conta esserci adesso e
+  non solo esserci stati. Chi non ci arriva compare comunque, in coda.
 - **Faccia di merda della settimana**: il recap apre il voto sui selfie appena chiusi —
   si vota dal sito con cinque 💩 in overlay (con undo, e non sui propri) — e il recap
   dopo proclama chi ha raccolto più merda, che si becca un badge.

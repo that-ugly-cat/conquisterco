@@ -94,6 +94,13 @@ MIN_WEEK_DAYS = 3
 # qui la contraddirebbe.
 WEEKS_MIN_PLAYED = 8
 
+# Seconda condizione, di recenza: per stare in graduatoria non basta avere una
+# storia, bisogna esserci adesso. Attenzione, questa rende la classifica
+# **dipendente dall'ora in cui la guardi**: un giocatore ne esce da solo
+# smettendo di cagare, senza che cambi un dato. E' voluto.
+WEEKS_ACTIVE_WINDOW = 8    # settimane della finestra di attivita'
+WEEKS_ACTIVE_DUMPS = 8     # cacate che servono dentro la finestra
+
 # --- Faccia di merda della settimana ---------------------------------------
 # Un selfie vale la SOMMA dei voti presi, non la media: vince chi raccoglie piu'
 # merda. Parita' in testa = nessuna proclamazione, come per i comuni.

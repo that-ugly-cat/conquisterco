@@ -142,6 +142,7 @@ def test_sotto_la_soglia_si_resta_fuori_graduatoria_ma_in_lista(conn, geo, monke
     """Un 1/1 fa rateo 1.00 e starebbe in testa per sempre: sotto la soglia si
     esce dalla graduatoria, non dalla lista."""
     monkeypatch.setattr(config, "WEEKS_MIN_PLAYED", 3)
+    monkeypatch.setattr(config, "WEEKS_ACTIVE_DUMPS", 0)   # qui si prova l'altra soglia
     veterano, meteora = add_user(conn, "Veterano"), add_user(conn, "Meteora")
     now = datetime.now()
     # il veterano gioca quattro settimane e ne vince due
@@ -232,3 +233,39 @@ def test_avvio_dell_app_chiude_lo_storico(conn, geo, tmp_path, monkeypatch):
     # la settimana in corso NON e' fra quelle: la chiude solo il recap
     assert c.execute("SELECT MAX(end_ts) FROM weeks").fetchone()[0] < _ts(now)
     c.close()
+
+
+def test_serve_anche_essere_attivi_adesso(conn, geo, monkeypatch):
+    """Seconda condizione: la storia non basta, bisogna esserci ora. Il veterano
+    ha le settimane ma ha smesso di cagare; il nuovo caga tanto ma e' arrivato
+    ieri. Fuori tutti e due, per ragioni opposte."""
+    monkeypatch.setattr(config, "WEEKS_MIN_PLAYED", 3)
+    monkeypatch.setattr(config, "WEEKS_ACTIVE_WINDOW", 8)
+    monkeypatch.setattr(config, "WEEKS_ACTIVE_DUMPS", 4)
+    now = datetime.now()
+
+    reduce = add_user(conn, "Reduce")          # storia lunga, fermo da mesi
+    for w in (30, 29, 28, 27):
+        dep(conn, reduce, 1012, _ts(now - timedelta(weeks=w)))
+    nuovo = add_user(conn, "Nuovo")            # arrivato ieri, cagatissimo
+    for h in range(6):
+        dep(conn, nuovo, 1005, _ts(now - timedelta(hours=3 + h)))
+    assiduo = add_user(conn, "Assiduo")        # storia lunga E attivo ora
+    for w in (30, 29, 28, 27):
+        dep(conn, assiduo, 1004, _ts(now - timedelta(weeks=w)))
+    for w in (3, 2, 1):
+        dep(conn, assiduo, 1004, _ts(now - timedelta(weeks=w)))
+    dep(conn, assiduo, 1004, _ts(now - timedelta(days=2)))
+    run_all(conn, geo)
+    weeks.close_due_weeks(conn)
+
+    per_nome = {r["name"]: r for r in weeks.weeks_leaderboard(conn, now=now)}
+    assert per_nome["Reduce"]["ranked"] is False      # settimane si', attivita' no
+    assert per_nome["Reduce"]["recent"] == 0
+    assert per_nome["Nuovo"]["ranked"] is False       # attivita' si', settimane no
+    assert per_nome["Nuovo"]["recent"] == 6
+    assert per_nome["Assiduo"]["ranked"] is True      # tutte e due
+
+    # la finestra e' agganciata a `now`: guardando fra un anno il reduce resta fuori
+    dopo = {r["name"]: r for r in weeks.weeks_leaderboard(conn, now=now + timedelta(weeks=52))}
+    assert dopo["Assiduo"]["ranked"] is False         # nel frattempo ha smesso anche lui

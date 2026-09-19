@@ -186,18 +186,31 @@ def running_gains(conn: sqlite3.Connection) -> dict[int, float]:
 # Classifica per settimane vinte
 # ---------------------------------------------------------------------------
 
-def weeks_leaderboard(conn: sqlite3.Connection) -> list[dict]:
+def weeks_leaderboard(conn: sqlite3.Connection, now: datetime | None = None) -> list[dict]:
     """Settimane vinte su settimane giocate. «Giocata» = settimana chiusa in cui
     hai depositato almeno una volta: chi non c'era non viene punito per le
     settimane in cui non c'era, ma chi c'era e ha perso sì.
 
-    Sotto `config.WEEKS_MIN_PLAYED` settimane giocate si è **fuori graduatoria**
-    (`ranked=False`), perché un rateo su una sola settimana non è un rateo: 1/1
-    fa 1.00 e resterebbe in testa per sempre. Fuori graduatoria non vuol dire
-    fuori dalla lista — si compare in coda, ordinati per quanto manca ad
-    entrarci. Ordinata per rateo, poi per vinte, poi per giocate; e la colonna
-    `played` va mostrata sempre accanto, perché la soglia riduce il rumore ma
-    non lo azzera."""
+    Per stare **in graduatoria** (`ranked`) servono due cose insieme:
+
+    - almeno `WEEKS_MIN_PLAYED` settimane giocate — un rateo su una settimana
+      sola non è un rateo, 1/1 fa 1.00 e resterebbe in testa per sempre;
+    - almeno `WEEKS_ACTIVE_DUMPS` cacate nelle ultime `WEEKS_ACTIVE_WINDOW`
+      settimane — la storia non basta, bisogna esserci adesso.
+
+    La seconda condizione rende questa classifica **dipendente dall'istante in
+    cui la si guarda**: è l'unica cosa qui dentro che cambia senza che cambi un
+    dato, e un giocatore ne esce da solo smettendo di cagare. Da qui il
+    parametro `now`, che i test fissano.
+
+    Fuori graduatoria non vuol dire fuori dalla lista: si compare in coda con
+    i numeri veri, ordinati per quanto manca a rientrarci. Ordinata per rateo,
+    poi vinte, poi giocate; `played` e `recent` vanno mostrate sempre accanto
+    al rateo, perché le soglie riducono il rumore ma non lo azzerano."""
+    now = now or datetime.now()
+    da = fmt_ts(now - timedelta(weeks=config.WEEKS_ACTIVE_WINDOW))
+    recenti = {r["u"]: r["n"] for r in conn.execute(
+        "SELECT user_id AS u, COUNT(*) AS n FROM deposits WHERE ts >= ? GROUP BY user_id", (da,))}
     names = {r["id"]: r["name"] for r in conn.execute(
         "SELECT id, COALESCE(public_name, display_name) AS name FROM users")}
     weeks = conn.execute(
@@ -214,18 +227,18 @@ def weeks_leaderboard(conn: sqlite3.Connection) -> list[dict]:
             won[w["winner_user_id"]] += 1
             played.setdefault(w["winner_user_id"], 0)
     rows = []
-    for u in set(played) | set(won):
-        p, v = played.get(u, 0), won.get(u, 0)
+    for u in set(played) | set(won) | set(recenti):
+        p, v, rec = played.get(u, 0), won.get(u, 0), recenti.get(u, 0)
         rows.append({
             "user_id": u, "name": names.get(u, str(u)),
-            "won": v, "played": p,
+            "won": v, "played": p, "recent": rec,
             "ratio": round(v / p, 3) if p else 0.0,
-            "ranked": p >= config.WEEKS_MIN_PLAYED,
+            "ranked": p >= config.WEEKS_MIN_PLAYED and rec >= config.WEEKS_ACTIVE_DUMPS,
         })
     rows.sort(key=lambda x: (x["ranked"], x["ratio"], x["won"], x["played"]), reverse=True)
-    # in coda, chi non ha ancora abbastanza settimane: prima chi ci è più vicino
+    # in coda chi è fuori: prima chi è più vicino a rientrarci
     coda = [r for r in rows if not r["ranked"]]
-    coda.sort(key=lambda x: (x["played"], x["won"]), reverse=True)
+    coda.sort(key=lambda x: (x["played"], x["recent"], x["won"]), reverse=True)
     return [r for r in rows if r["ranked"]] + coda
 
 

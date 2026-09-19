@@ -272,14 +272,23 @@ quasi mai, perché i badge fanno divergere i decimali.
 chiusa in cui hai depositato almeno una volta. Chi non c'era non viene punito per le
 settimane in cui non c'era; chi c'era e ha perso sì.
 
-Sotto `WEEKS_MIN_PLAYED` settimane giocate si è **fuori graduatoria**: un rateo su una
-settimana sola non è un rateo, 1/1 fa 1.00 e resterebbe in testa per sempre. Fuori
-graduatoria **non vuol dire fuori dalla lista** — si compare in coda, con posizione e
-rateo a trattino ma vinte e giocate vere, ordinati per quanto manca a entrarci. Il
-principio è quello della classifica principale (§4): chi ha giocato compare. E la colonna
-`giocate` resta **sempre** accanto al rateo, perché la soglia riduce il rumore, non lo
-azzera: con `WEEKS_MIN_PLAYED = 8` entrano in graduatoria dodici giocatori su diciotto,
-e il più leggero ci sta appena dentro.
+Per stare **in graduatoria** servono due cose insieme:
+
+- almeno `WEEKS_MIN_PLAYED` **settimane giocate** — un rateo su una settimana sola non è
+  un rateo, 1/1 fa 1.00 e resterebbe in testa per sempre;
+- almeno `WEEKS_ACTIVE_DUMPS` **cacate nelle ultime `WEEKS_ACTIVE_WINDOW` settimane** —
+  la storia non basta, bisogna esserci adesso.
+
+La seconda condizione rende questa classifica **dipendente dall'istante in cui la si
+guarda**: è l'unica cosa nel gioco che cambia senza che cambi un dato, e un giocatore ne
+esce da solo smettendo di cagare. È voluto — premia chi c'è — ma va saputo, perché
+significa che il rateo storico da solo non garantisce un posto.
+
+Fuori graduatoria **non vuol dire fuori dalla lista**: si compare in coda, con posizione e
+rateo a trattino ma vinte, giocate e cacate recenti vere, ordinati per quanto manca a
+entrarci. Il principio è quello della classifica principale (§4): chi ha giocato compare.
+E `giocate` e `ultime N` stanno **sempre** accanto al rateo, perché le soglie riducono il
+rumore ma non lo azzerano.
 
 ### Faccia di merda della settimana
 
