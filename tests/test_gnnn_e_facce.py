@@ -184,3 +184,42 @@ def test_il_backfill_non_apre_voti_di_nascosto(conn, geo):
     corrente = weeks.close_due_weeks(conn, closing_now=True)[-1]
     aperta = faces.open_vote_week(conn)
     assert aperta is not None and aperta["id"] == corrente["id"]
+
+
+# --- Cacca nautica ---------------------------------------------------------
+
+def test_cacca_nautica_premia_i_depositi_senza_comune(conn, geo):
+    """Le cacate in mare sono invisibili a tutto il resto del motore: non
+    conquistano, non contendono, non fanno punteggio. Questo e' l'unico badge
+    che le vede."""
+    from conquisterco.ingest import add_deposit
+
+    a = add_user(conn, "A")
+    dep(conn, a, 1012, "2026-05-01 10:00:00")            # a terra
+    in_mare = add_deposit(conn, user_id=a, ts="2026-05-02 10:00:00",
+                          lat=0.0, lon=-30.0,            # Atlantico: nessun comune
+                          source="telegram", photo_ref="x.jpg")
+    run_all(conn, geo)
+
+    assert conn.execute("SELECT territory_osm_id FROM deposits WHERE id=?",
+                        (in_mare,)).fetchone()["territory_osm_id"] is None
+    got = _awards(conn, "cacca_nautica", a)
+    assert len(got) == 1 and got[0].ts_earned == "2026-05-02 10:00:00"
+
+    # e non ne prende per quella a terra: sono due insiemi disgiunti
+    assert all(g.ts_earned != "2026-05-01 10:00:00" for g in got)
+
+
+def test_la_cacca_in_mare_resta_fuori_dal_resto_del_motore(conn, geo):
+    """Contropartita del test sopra: il badge nuovo non deve aver fatto entrare
+    i depositi senza comune nelle altre regole."""
+    from conquisterco.ingest import add_deposit
+
+    a = add_user(conn, "A")
+    add_deposit(conn, user_id=a, ts="2026-05-02 10:00:00", lat=0.0, lon=-30.0,
+                source="telegram", photo_ref="x.jpg")
+    run_all(conn, geo)
+
+    codici = {x.code for x in evaluate(conn) if x.user_id == a}
+    assert codici == {"cacca_nautica"}, f"il mare ha fatto scattare anche: {codici}"
+    assert conn.execute("SELECT COUNT(*) FROM territory_ownership").fetchone()[0] == 0

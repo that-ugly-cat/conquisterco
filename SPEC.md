@@ -170,6 +170,22 @@ comune, `vendetta_fredda` riconquista dopo ≥30g, `avignone` Roma→persa→Avi
 
 Soglie e finestre in `config.py`.
 
+### Cacca Nautica — l'unico badge che guarda fuori dai comuni
+
+Un deposito che il geocoder non riesce ad attribuire a nessun comune — in pratica **una
+cacata in acqua** — è invisibile a tutto il motore: `EvalContext` carica solo i depositi
+con `territory_osm_id`, quindi quella cacata non conquista, non contende, non fa
+punteggio e non concorre a nessun altro badge. Sulla mappa in modalità Dump il pin però
+si vede, perché `dumps_geo` non filtra: era una cacata **visibile e muta**.
+
+**Cacca Nautica** (ripetibile, 🌊) è l'unica regola che legge quei depositi, da una lista
+`ctx.deposits_nautici` tenuta **separata** di proposito: infilarli fra gli altri farebbe
+ragionare ogni regola su un territorio `None`.
+
+> Al 19 set 2026 i depositi senza comune dell'intero cacasto sono **tre**, tutti dello
+> stesso giocatore e tutti in mare: Golfo di Napoli, Eolie, largo dell'Elba — le cacate
+> in traghetto, lasciate in acqua di proposito quando si è ripulito il dato.
+
 ### Gnnn! — il badge degli stitici
 
 Dal profilo ci si può **dichiarare stitici**. Da quel momento ogni cacata frutta un

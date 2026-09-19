@@ -39,6 +39,9 @@ in alto, trasferta più lontana…), oltre 50 achievement, e una mappa coropleti
 - **Faccia di merda della settimana**: il recap apre il voto sui selfie appena chiusi —
   si vota dal sito con cinque 💩 in overlay (con undo, e non sui propri) — e il recap
   dopo proclama chi ha raccolto più merda, che si becca un badge.
+- **Cacca Nautica**: una cacata in acqua non ha un comune, quindi per il motore non
+  esiste — non conquista niente e non fa punteggio. Questo badge è l'unica cosa che la
+  vede.
 - **Gnnn!**: chi si dichiara stitico prende un badge a punti fissi a ogni cacata. La
   dichiarazione è tenuta a periodi, così toglierla non cancella quello che hai già preso.
 - **Record** superlativi, **feed** dei flip, **badge** (>50) con legenda: la scritta

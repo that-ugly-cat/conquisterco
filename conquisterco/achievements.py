@@ -105,6 +105,22 @@ class EvalContext:
                    ORDER BY ts, id"""
             )
         ]
+        # I depositi SENZA comune: il motore li ignora ovunque (la query sopra
+        # filtra `territory_osm_id IS NOT NULL`), perche' quasi tutte le regole
+        # parlano di territori. Restano pero' cacate vere, e sulla mappa in
+        # modalita' Dump si vedono — quindi almeno un badge se lo meritano.
+        # Stanno in una lista SEPARATA di proposito: infilarli fra gli altri
+        # farebbe ragionare ogni regola su un territorio None.
+        self.deposits_nautici = [
+            {"id": r["id"], "user_id": r["user_id"], "ts": r["ts"],
+             "dt": parse_ts(r["ts"]), "lat": r["lat"], "lon": r["lon"],
+             "altitude": r["altitude"], "photo": r["photo_ref"] is not None}
+            for r in conn.execute(
+                """SELECT id, user_id, ts, lat, lon, altitude, photo_ref
+                   FROM deposits WHERE territory_osm_id IS NULL
+                   ORDER BY ts, id""")
+        ]
+
         self.deposits_by_user: dict[int, list[dict]] = {}
         for d in self.deposits:
             self.deposits_by_user.setdefault(d["user_id"], []).append(d)
@@ -921,6 +937,19 @@ def _faccia_di_merda(ctx: EvalContext) -> list[Award]:
     return [Award("faccia_di_merda", f["user_id"], f["ts"],
                   f"settimana chiusa il {f['week_end'][:10]}")
             for f in ctx.faces]
+
+
+@achievement("cacca_nautica", "Cacca Nautica",
+             "Deposito in acqua, dove non c'è comune da conquistare.",
+             icon="🌊")
+def _cacca_nautica(ctx: EvalContext) -> list[Award]:
+    """Ripetibile. È l'unica regola che guarda i depositi senza comune: per
+    tutto il resto del motore una cacata in mare non esiste — non conquista,
+    non contende, non fa punti — e prima di questo badge l'unica traccia che
+    ne restava era il pin sulla mappa."""
+    return [Award("cacca_nautica", d["user_id"], d["ts"],
+                  f"{d['lat']:.3f}, {d['lon']:.3f}")
+            for d in ctx.deposits_nautici]
 
 
 # ---------------------------------------------------------------------------
