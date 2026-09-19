@@ -67,12 +67,24 @@ territorio. Accanto al nome, la **bandiera** scelta dal giocatore.
 ### 4.1 Punteggio (somma pesata)
 
 ```
-score = PT_COMUNE·comuni + PT_KM2·km² + PT_BADGE·(badge distinti; i segreti ×MULT)
+score = PT_COMUNE·comuni + PT_KM2·km² + punti dei badge (i segreti ×MULT)
 ```
 
 Tutti i coefficienti in `config.py` (default: comune 10 · 100 km² = 1 pt · badge 10 ·
-segreti ×2). I badge contano **una volta per tipo** (i ripetibili non gonfiano). km²
-scalato per non schiacciare comuni e badge. Interamente **derivato e ricalcolabile**.
+segreti ×2). km² scalato per non schiacciare comuni e badge. Interamente **derivato e
+ricalcolabile**.
+
+**I badge danno sempre punti, anche i ripetibili presi più volte** — ma con **peso
+calante**: la n-esima presa dello stesso badge vale `punti · DECAY^(n-1)`. Con
+`SCORE_BADGE_DECAY = 0.5` la somma di un ripetibile grindato all'infinito converge a
+`punti/(1-DECAY)`, cioè il doppio di un one-shot: un badge facile ripetuto mille volte
+non sfonda la classifica, ma la presa numero mille qualcosa la vale ancora.
+
+Un badge può **dichiarare i suoi punti e il suo decadimento** nel registry
+(`@achievement(..., points=..., decay=...)`), e la coppia finisce in colonna nella
+tabella `achievements` a ogni `sync`. È la deroga che serve a un ripetibile a valore
+fisso: **Gnnn!** vale `GNNN_POINTS` tondi a ogni cacata, `decay=1.0`, perché un handicap
+che si sgonfia dopo tre giorni non è un handicap.
 
 ---
 
@@ -141,6 +153,22 @@ comune, `vendetta_fredda` riconquista dopo ≥30g, `avignone` Roma→persa→Avi
 
 Soglie e finestre in `config.py`.
 
+### Gnnn! — il badge degli stitici
+
+Dal profilo ci si può **dichiarare stitici**. Da quel momento ogni cacata frutta un
+**Gnnn!** (`GNNN_POINTS` punti, nessun decadimento): è un handicap dichiarato, per chi
+gioca a frequenza bassa e non può competere sul volume.
+
+La dichiarazione **non è un booleano ma una storia**: `stitico_periods` tiene i periodi
+in cui valeva, e Gnnn! premia i depositi caduti dentro. Serve perché il motore rivaluta
+sempre tutto lo storico — un flag letto al presente regalerebbe un Gnnn! a ogni cacata
+del 2018, e spegnendolo li toglierebbe tutti in blocco. Con i periodi si può smettere di
+dichiararsi stitici senza perdere quello che si è guadagnato.
+
+> È **autodichiarato** e nessuno lo verifica: chi vuole barare se lo spunta e prende 3
+> punti a cacata. Scelta deliberata — il controllo sociale del gruppo costa meno di un
+> motore anti-frode, e la data di dichiarazione è pubblica sul profilo.
+
 ### Badge segreti
 
 Presenti nel motore e assegnati come gli altri, ma **nascosti dalla legenda** del
@@ -196,6 +224,57 @@ implementati:
   precedente (flip a livello regione).
 - **Cordone sanitario** — possiedi tutte le province confinanti con una che non
   è tua (richiede adiacenze, più avanti).
+
+---
+
+## 6bis. Settimane, e la faccia di merda
+
+### La settimana
+
+Il punteggio è una funzione dello stato, quindi «punti della settimana» non è un dato:
+è un **delta** fra due istantanee (`weeks.score_snapshot`), ricostruite rileggendo
+l'ownership dai flip e i badge dagli award datati.
+
+**La settimana la chiude il recap.** Quando il bot manda il riepilogo della domenica, la
+settimana finisce in quell'istante e il verdetto viene scritto in `weeks`. Da lì non si
+ricalcola più: quello che il bot ha annunciato al gruppo **resta** il verdetto, anche se
+lo storico viene ri-arricchito dopo. È lo stesso patto di `manual_awards` — dato grezzo,
+non derivato, immune al `finalize`.
+
+Le settimane tessellano senza buchi: ognuna comincia dove è finita la precedente, così
+la cacata delle 21 di domenica (dopo il recap delle 20) cade nella settimana nuova e non
+in un limbo. Quelle passate **senza** recap — tutto lo storico WhatsApp, e le domeniche
+in cui il cron non è partito — si chiudono retroattivamente sulla griglia dei lunedì,
+una volta sola. Due recap ravvicinati non fabbricano una settimana di due ore:
+sotto `MIN_WEEK_DAYS` non si chiude niente.
+
+**Vincitore = chi guadagna strettamente più punti. Parità = settimana contesa, non la
+vince nessuno**: la stessa regola dei comuni (§2). Sui dati veri la parità non capita
+quasi mai, perché i badge fanno divergere i decimali.
+
+**Classifica per settimane vinte**: `vinte / giocate`, dove «giocata» è una settimana
+chiusa in cui hai depositato almeno una volta. Chi non c'era non viene punito per le
+settimane in cui non c'era; chi c'era e ha perso sì. Il rateo da solo mente (una su una
+fa 1.00), quindi la colonna `giocate` sta **sempre** accanto.
+
+### Faccia di merda della settimana
+
+Il recap che chiude la settimana **apre il voto sui suoi selfie** e **proclama** quella
+della settimana prima, il cui voto si chiude in quel momento. Un solo voto aperto alla
+volta.
+
+- Si vota dal sito, **dietro login** (i selfie sono dato sensibile e lo restano): il
+  selfie a tutta cella e cinque 💩 in overlay, da 1 a 5. Un voto per votante per
+  selfie, cambiabile, con **undo**.
+- **Non si votano i propri selfie**: non compaiono nemmeno in gara.
+- Vince la **somma** dei voti presi, non la media: chi raccoglie più merda vince, e tre
+  persone che ti danno 2 battono una che ne dà 5. Parità in testa, o meno di
+  `FACE_MIN_VOTERS` votanti nella settimana: **nessuna proclamazione**, ma il voto si
+  chiude lo stesso — una settimana non resta aperta in eterno.
+- La proclamazione vive in `weeks.face_deposit_id` ed è **dato grezzo**. Il badge
+  ripetibile **Faccia di Merda** la rilegge, come i manuali rileggono `manual_awards`,
+  ed è datato sul selfie perché stia nel punto giusto della storia.
+- I voti stanno in `selfie_votes`, anche loro fuori dalla portata del `finalize`.
 
 ---
 
@@ -343,6 +422,13 @@ Schema DB completo in [`schema.sql`](schema.sql).
 **Oltre le fasi:** geocoding reale via Nominatim + cache (non self-host) con quota da
 open-meteo (§7.1); i18n IT/EN; deploy Docker + Caddy (`DEPLOY.md`); dati veri su volume
 fuori da git.
+
+**Espansione (settembre 2026):** i **badge danno sempre punti**, anche i ripetibili, con
+peso calante e deroga per badge (§4.1); **Gnnn!**, l'handicap autodichiarato degli
+stitici, con la dichiarazione tenuta a periodi e non a booleano (§6); le **settimane**
+come oggetto di gioco — chiuse dal recap, vinte a punti guadagnati e non a numero di
+cacate, con classifica per **vinte/giocate** (§6bis); la **faccia di merda della
+settimana**, votata a cinque 💩 dal sito e proclamata dal recap successivo (§6bis).
 
 **Espansione (luglio 2026):** **punteggio** combinato che ordina la classifica (§4.1);
 oltre 50 achievement (30 pubblici + segreti + **manuali**, §6); **bandiere** in

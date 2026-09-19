@@ -236,18 +236,48 @@ def test_weekly_recap():
     assert rec["slackers"] == ["Carol"]
 
     msg = bot._recap_message(rec)
-    assert "Alice — 2 💩" in msg and "Bob — 1 💩" in msg
+    # la riga porta i punti, e le cacate fra parentesi
+    assert "Alice" in msg and "(2 💩)" in msg and "(1 💩)" in msg
     assert "Carol" in msg and "🇮🇹" in msg and "🇬🇧" in msg
 
 
 def test_recap_include_podio_a_punti():
     msg = bot._recap_message({
-        "dumpers": [("Alice", 2)], "slackers": [],
+        "ranked": [("Alice", 40, 2)], "dumpers": [("Alice", 2)], "slackers": [],
         "podium": [("Alice", 120), ("Bob", 90), ("Carol", 30)],
     })
     assert "🥇 Alice — 120" in msg
     assert "🥈 Bob — 90" in msg
     assert "🥉 Carol — 30" in msg
+
+
+def test_recap_ordina_a_punti_non_a_cacate():
+    """Chi ha cagato meno ma guadagnato di piu' sta sopra: è il punto del
+    cambio — un badge preso vale quanto un comune strappato."""
+    msg = bot._recap_message({
+        "ranked": [("Bob", 95, 1), ("Alice", 30, 4)], "dumpers": [("Alice", 4), ("Bob", 1)],
+        "slackers": [], "podium": [], "winner": "Bob", "contested": False,
+    })
+    assert msg.index("1. Bob — 95 pt (1 💩)") < msg.index("2. Alice — 30 pt (4 💩)")
+    assert "Vince la settimana: Bob" in msg
+
+
+def test_recap_settimana_contesa():
+    msg = bot._recap_message({
+        "ranked": [("Alice", 30, 1), ("Bob", 30, 1)], "dumpers": [], "slackers": [],
+        "podium": [], "winner": None, "contested": True,
+    })
+    assert "contesa" in msg and "contested week" in msg
+
+
+def test_recap_link_al_voto_e_faccia_proclamata():
+    msg = bot._recap_message(
+        {"ranked": [("Alice", 10, 1)], "dumpers": [], "slackers": [], "podium": []},
+        face={"author": "Bob", "total": 14, "voters": 4},
+        vote_url="https://conquisterco.example/vote")
+    assert "Faccia di merda della settimana scorsa: Bob" in msg
+    assert "14 💩 da 4 votanti" in msg
+    assert "https://conquisterco.example/vote" in msg
 
 
 def test_solo_dal_gruppo_autorizzato(tmp_path):

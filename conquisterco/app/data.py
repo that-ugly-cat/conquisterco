@@ -12,6 +12,8 @@ AVG_DUMP_G = 128
 
 from ..leaderboards import _streaks, main_leaderboard, records
 from ..recompute import owner_of
+from ..util import is_video
+from .. import weeks
 
 _RECORD_LABELS = {
     "nord": "Più a Nord", "sud": "Più a Sud", "est": "Più a Est", "ovest": "Più a Ovest",
@@ -242,28 +244,48 @@ def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
     return items[:limit]
 
 
-def weekly_recap(conn: sqlite3.Connection) -> dict:
-    """Riepilogo della settimana corrente (da lunedì 00:00). `dumpers`: chi ha
-    cagato, con quante volte, in ordine. `slackers`: chi è attivo di recente
-    (≥1 deposito negli ultimi 30 giorni) ma questa settimana ha fatto zero."""
+def weekly_recap(conn: sqlite3.Connection, week: dict | None = None) -> dict:
+    """Riepilogo di una settimana. `week` è la riga appena chiusa dal recap; se
+    manca si guarda la settimana ancora in corso.
+
+    La classifica della settimana è a **PUNTI guadagnati**, non a numero di
+    cacate: il numero resta accanto come colore, ma non è quello che ordina.
+    Un badge preso vale quanto un comune strappato, ed è giusto che si veda.
+
+    `slackers`: chi è attivo di recente (≥1 deposito negli ultimi 30 giorni) ma
+    in questa settimana ha fatto zero."""
     now = datetime.now()
-    week_start = (now - timedelta(days=now.weekday())).replace(
-        hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
+    start = week["start_ts"] if week else weeks.current_week_start(conn)
+    end = week["end_ts"] if week else None
     active_since = (now - timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
 
-    week = {r["u"]: r["n"] for r in conn.execute(
-        "SELECT user_id u, COUNT(*) n FROM deposits WHERE ts>=? GROUP BY user_id", (week_start,))}
+    gains = weeks.gains(conn, start, end)
+    q = "SELECT user_id u, COUNT(*) n FROM deposits WHERE ts>=?"
+    args = [start]
+    if end:
+        q += " AND ts<?"
+        args.append(end)
+    counts = {r["u"]: r["n"] for r in conn.execute(q + " GROUP BY user_id", args)}
+
     active = conn.execute(
         """SELECT u.id, COALESCE(u.public_name, u.display_name) name FROM users u
            WHERE EXISTS (SELECT 1 FROM deposits d WHERE d.user_id=u.id AND d.ts>=?)
            ORDER BY name""", (active_since,)).fetchall()
+    names = {r["id"]: r["name"] for r in active}
 
-    dumpers = sorted(((r["name"], week.get(r["id"], 0)) for r in active if week.get(r["id"], 0) > 0),
-                     key=lambda x: -x[1])
-    slackers = [r["name"] for r in active if week.get(r["id"], 0) == 0]
-    # podio a punteggio (classifica generale, non solo la settimana)
+    # in classifica settimanale chiunque abbia guadagnato punti o cagato
+    ranked = sorted(
+        ((names.get(u) or str(u), round(gains.get(u, 0.0)), counts.get(u, 0))
+         for u in set(gains) | set(counts)),
+        key=lambda x: (-x[1], -x[2], x[0]))
+    slackers = [r["name"] for r in active if not counts.get(r["id"])]
     podium = [(r["name"], r["score"]) for r in main_leaderboard(conn)[:3]]
-    return {"dumpers": dumpers, "slackers": slackers, "podium": podium}
+    winner = None
+    if week:
+        winner = names.get(week["winner_user_id"]) if week["winner_user_id"] else None
+    return {"ranked": ranked, "slackers": slackers, "podium": podium,
+            "winner": winner, "contested": bool(week and week["contested"]),
+            "dumpers": [(n, c) for n, _, c in ranked if c > 0]}
 
 
 def record_holders(conn: sqlite3.Connection) -> dict[str, int | None]:
@@ -362,6 +384,12 @@ def my_stats(conn: sqlite3.Connection, uid: int, t: dict | None = None) -> dict 
         "activity": monthly_activity(conn, uid),
         "weight_kg": round(c["tot"] * AVG_DUMP_G / 1000.0, 1),
         "no_selfie": bool(u["no_selfie"]),
+        "stitico": bool(u["stitico"]),
+        "stitico_since": (conn.execute(
+            """SELECT MIN(from_ts) AS f FROM stitico_periods
+               WHERE user_id=? AND to_ts IS NULL""", (uid,)).fetchone()["f"]),
+        "weeks_won": conn.execute(
+            "SELECT COUNT(*) FROM weeks WHERE winner_user_id=?", (uid,)).fetchone()[0],
         "telegram_id": u["telegram_id"],
         "telegram_linked": bool(u["telegram_user_id"]),
         "selfie_count": conn.execute(
@@ -434,11 +462,7 @@ def delete_user(conn: sqlite3.Connection, uid: int, media_dir) -> None:
             p.unlink()
 
 
-_VIDEO_EXT = {"mp4", "mov", "webm", "mkv", "avi", "3gp", "m4v", "ogv"}
-
-
-def _is_video(ref: str | None) -> bool:
-    return bool(ref) and "." in ref and ref.rsplit(".", 1)[-1].lower() in _VIDEO_EXT
+_is_video = is_video   # alias storico: la funzione vive in util (serve anche al voto)
 
 
 def gallery(conn: sqlite3.Connection, user_id: int, limit: int = 1000) -> dict | None:

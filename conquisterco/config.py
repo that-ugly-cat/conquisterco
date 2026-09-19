@@ -49,13 +49,37 @@ TITICACA_RADIUS_KM = 80.0  # raggio entro cui scatta Titicacca
 TRIP_WINDOW_DAYS = 5       # Fuck Brexit / Barbarossa / Cortina di carta igienica
 
 # --- Punteggio (somma pesata, tutto ritarabile qui) ------------------------
-# score = PT_COMUNE·comuni + PT_KM2·km² + PT_BADGE·(badge distinti; i segreti ×MULT)
-# I badge contano UNA VOLTA per tipo (i ripetibili non gonfiano). km² scalato
-# così non schiaccia comuni e badge.
+# score = PT_COMUNE·comuni + PT_KM2·km² + punti dei badge (i segreti ×MULT).
+# km² scalato così non schiaccia comuni e badge.
+#
+# I badge danno SEMPRE punti, anche i ripetibili presi più volte — ma con peso
+# calante: la n-esima presa dello stesso badge vale `punti · DECAY^(n-1)`. Con
+# DECAY=0.5 un ripetibile infinito non supera mai il doppio di un one-shot
+# (10+5+2.5+… → 20), quindi grindare un badge facile non sfonda la classifica.
+# Un badge può dichiarare i suoi punti e il suo decadimento nel registry
+# (`@achievement(..., points=…, decay=…)`): è così che Gnnn! vale 3 punti tondi
+# a ogni cacata, senza decadere.
 SCORE_PT_COMUNE = 10.0     # punti per comune posseduto
 SCORE_PT_KM2 = 0.01        # punti per km² (→ 100 km² = 1 punto)
-SCORE_PT_BADGE = 10.0      # punti per badge distinto
+SCORE_PT_BADGE = 10.0      # punti del badge, default se non lo dichiara
+SCORE_BADGE_DECAY = 0.5    # ratio di decadimento fra una presa e la successiva
 SCORE_SECRET_MULT = 2      # i badge segreti valgono doppio
+
+# --- Stitici ---------------------------------------------------------------
+GNNN_POINTS = 3.0          # punti di ogni Gnnn! (niente decadimento)
+
+# --- Settimane -------------------------------------------------------------
+# La settimana la chiude il recap. Sotto questa durata non si chiude niente:
+# due `conquisterco-recap` nello stesso giorno non devono fabbricare una
+# settimana di due ore e regalarla a chi ha cagato in quelle due ore.
+MIN_WEEK_DAYS = 3
+
+# --- Faccia di merda della settimana ---------------------------------------
+# Un selfie vale la SOMMA dei voti presi, non la media: vince chi raccoglie piu'
+# merda. Parita' in testa = nessuna proclamazione, come per i comuni.
+FACE_MAX_VOTE = 5          # quante emoji cacca in overlay (voto da 1 a 5)
+FACE_MIN_VOTERS = 2        # votanti distinti sotto i quali la settimana non elegge
+FACE_SELF_VOTE = False     # si possono votare i propri selfie?
 
 # --- Riferimenti geografici ------------------------------------------------
 ITALIAN_REGIONS = frozenset({

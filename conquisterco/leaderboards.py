@@ -16,26 +16,40 @@ def _names(conn: sqlite3.Connection) -> dict[int, str]:
         "SELECT id, COALESCE(public_name, display_name) AS name FROM users")}
 
 
-def _badge_counts(conn: sqlite3.Connection) -> dict[int, tuple[int, int]]:
-    """Per utente: (badge distinti normali, badge distinti segreti). DISTINCT →
-    i ripetibili contano una volta sola (Blitz ×6 = 1)."""
-    out: dict[int, tuple[int, int]] = {}
+def _decayed(points: float, decay: float, n: int) -> float:
+    """Valore di n prese dello stesso badge: points·(1 + d + d² + … + d^(n-1)).
+    d=1 → lineare (n prese, n volte i punti); d<1 → serie geometrica, che
+    converge a points/(1-d): un ripetibile grindato all'infinito resta finito."""
+    if n <= 0:
+        return 0.0
+    if decay >= 1.0:
+        return points * n
+    return points * (1.0 - decay ** n) / (1.0 - decay)
+
+
+def badge_points(conn: sqlite3.Connection, until: str | None = None) -> dict[int, float]:
+    """Punti da badge per utente. **Ogni presa conta**, anche dei ripetibili, ma
+    con peso calante per badge (§config, deroga per badge nel registry). I
+    segreti valgono ×SECRET_MULT. `until`: solo i badge presi fino a quel ts."""
+    out: dict[int, float] = defaultdict(float)
+    where = "WHERE w.ts_earned <= ?" if until else ""
+    args = (until,) if until else ()
     for r in conn.execute(
-        """SELECT w.user_id AS uid,
-                  COUNT(DISTINCT CASE WHEN a.secret = 0 THEN a.id END) AS normal,
-                  COUNT(DISTINCT CASE WHEN a.secret = 1 THEN a.id END) AS secret
-           FROM awards w JOIN achievements a ON a.id = w.achievement_id
-           GROUP BY w.user_id"""
+        f"""SELECT w.user_id AS uid, a.secret AS secret,
+                   a.points AS points, a.decay AS decay, COUNT(*) AS n
+            FROM awards w JOIN achievements a ON a.id = w.achievement_id
+            {where}
+            GROUP BY w.user_id, a.id""", args
     ):
-        out[r["uid"]] = (r["normal"], r["secret"])
-    return out
+        val = _decayed(r["points"], r["decay"], r["n"])
+        out[r["uid"]] += val * (config.SCORE_SECRET_MULT if r["secret"] else 1)
+    return dict(out)
 
 
-def _score(comuni: int, km2: float, badges: tuple[int, int]) -> float:
-    nb, sb = badges
+def _score(comuni: int, km2: float, badge_pts: float) -> float:
     return (config.SCORE_PT_COMUNE * comuni
             + config.SCORE_PT_KM2 * km2
-            + config.SCORE_PT_BADGE * (nb + config.SCORE_SECRET_MULT * sb))
+            + badge_pts)
 
 
 def main_leaderboard(conn: sqlite3.Connection) -> list[dict]:
@@ -52,17 +66,16 @@ def main_leaderboard(conn: sqlite3.Connection) -> list[dict]:
     ):
         comuni[r["uid"]] += 1
         km2[r["uid"]] += r["area"]
-    badges = _badge_counts(conn)
+    badges = badge_points(conn)
     depositors = {r["uid"] for r in conn.execute("SELECT DISTINCT user_id AS uid FROM deposits")}
     rows = []
     # chiunque abbia giocato compare: ha cagato almeno una volta, possiede un
     # comune, o ha un badge (i gatti col badge del Sistema inclusi).
     for u in set(comuni) | set(badges) | depositors:
-        b = badges.get(u, (0, 0))
         rows.append({
             "user_id": u, "name": names.get(u, str(u)),
             "comuni": comuni[u], "km2": round(km2[u], 1),
-            "score": round(_score(comuni[u], km2[u], b)),
+            "score": round(_score(comuni[u], km2[u], badges.get(u, 0.0))),
         })
     rows.sort(key=lambda x: (x["score"], x["comuni"], x["km2"]), reverse=True)
     return rows

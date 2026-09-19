@@ -27,7 +27,18 @@ in alto, trasferta più lontana…), oltre 50 achievement, e una mappa coropleti
   passaggio del mouse.
 - **Punteggio** combinato (comuni · km² · badge, badge segreti ×2 — pesi in `config.py`)
   che ordina la **classifica**; colonna comuni/km² come tie-break. In classifica compare
-  chiunque abbia giocato, con la **bandiera** del giocatore accanto al nome.
+  chiunque abbia giocato, con la **bandiera** del giocatore accanto al nome. I badge
+  danno **sempre** punti, anche i ripetibili presi più volte, con peso calante a ogni
+  ripetizione.
+- **Settimane**: il recap della domenica chiude la settimana e ne scrive il verdetto, che
+  poi non si ricalcola più. La vince chi ha guadagnato più **punti**, non chi ha cagato
+  di più; parità = settimana contesa. Da lì una seconda classifica: **settimane vinte su
+  settimane giocate**.
+- **Faccia di merda della settimana**: il recap apre il voto sui selfie appena chiusi —
+  si vota dal sito con cinque 💩 in overlay (con undo, e non sui propri) — e il recap
+  dopo proclama chi ha raccolto più merda, che si becca un badge.
+- **Gnnn!**: chi si dichiara stitico prende un badge a punti fissi a ogni cacata. La
+  dichiarazione è tenuta a periodi, così toglierla non cancella quello che hai già preso.
 - **Record** superlativi, **feed** dei flip, **badge** (>50) con legenda: la scritta
   "N l'hanno preso" apre chi ce l'ha, il nome-badge apre "come si prende". **Galleria**
   per utente: i selfie si aprono in un **modale** (foto o video) con comune, data,

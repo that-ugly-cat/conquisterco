@@ -88,5 +88,17 @@ Il bot manda un riepilogo ogni **domenica alle 20:00** tramite cron dell'host
 0 20 * * 0  cd /opt/app/conquisterco && docker compose exec -T conquisterco uv run --no-sync conquisterco-recap
 ```
 
-Elenca chi ha cagato quante volte nella settimana (da lunedì) e punzecchia chi,
-pur attivo negli ultimi 30 giorni, questa settimana non ha depositato nulla.
+**Il recap non è solo un messaggio: è l'evento che chiude la settimana.** Nell'ordine
+proclama la faccia di merda votata (quella della settimana prima, il cui voto si chiude
+adesso), scrive il verdetto della settimana in corso, rigenera gli award e apre il voto
+sui selfie appena chiusi. Il verdetto scritto non si ricalcola più, quindi **una
+domenica saltata non si recupera annunciandola**: quella settimana verrà chiusa
+retroattivamente sulla griglia dei lunedì, in silenzio, al primo recap successivo.
+
+Alla **prima esecuzione dopo l'aggiornamento** il recap chiude in un colpo solo tutte le
+settimane dello storico (poco meno di mezzo secondo su 600 depositi) e da lì la
+classifica «settimane vinte» ha una storia. È idempotente: rilanciarlo non ne aggiunge.
+
+La classifica della settimana è a **punti guadagnati**, col numero di cacate accanto
+fra parentesi; e si punzecchia chi, pur attivo negli ultimi 30 giorni, questa settimana
+non ha depositato nulla.

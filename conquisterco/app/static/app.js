@@ -182,6 +182,28 @@ async function loadPanels() {
   });
   $("#tab-classifica").innerHTML = h + "</table>";
 
+  // settimane vinte: il rateo da solo mente (una su una fa 1.00), quindi
+  // "giocate" sta sempre in tabella accanto.
+  const wk = await fetch("/api/weeks").then((r) => r.json());
+  if (wk.leaderboard.length) {
+    let w = `<table><tr><th>${T.th_num}</th><th>${T.th_player}</th>`
+      + `<th class='num'>${T.weeks_ratio}</th><th class='num'>${T.weeks_won}</th>`
+      + `<th class='num'>${T.weeks_played}</th></tr>`;
+    wk.leaderboard.forEach((row, i) => {
+      w += `<tr><td>${i + 1}</td>`
+        + `<td><span class="player-link" onclick="showProfile(${row.user_id})">${esc(row.name)}</span></td>`
+        + `<td class="num"><b>${row.ratio.toFixed(2)}</b></td>`
+        + `<td class="num">${row.won}</td><td class="num">${row.played}</td></tr>`;
+    });
+    w += "</table>";
+    w += wk.history.map((h) =>
+      `<div class="feed-item"><span class="ts">${esc(h.end_ts.slice(0, 10))}</span> `
+      + (h.winner ? `\u{1F451} ${esc(h.winner)}` : (h.contested ? T.weeks_contested : "—"))
+      + (h.face ? ` · \u{1F4A9} ${esc(h.face)}` : "") + `</div>`
+    ).join("");
+    $("#tab-settimane").innerHTML = w;
+  }
+
   const keys = ["nord", "sud", "est", "ovest", "piu_in_alto", "piu_in_basso",
     "trasferta", "esploratore", "volume", "passaporto", "streak", "latifondista"];
   let r = "";

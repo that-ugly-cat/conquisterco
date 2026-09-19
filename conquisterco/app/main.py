@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
+from .. import config, faces, weeks
 from ..db import connect, init_db
 from ..geo import FakeGeocoder
 from ..geo_osm import OSMResolver
@@ -71,6 +72,9 @@ def _migrate(conn) -> None:
     if "provisional" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN provisional INTEGER NOT NULL DEFAULT 0")
         conn.commit()
+    if "stitico" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN stitico INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
     ach_cols = {r["name"] for r in conn.execute("PRAGMA table_info(achievements)")}
     if "secret" not in ach_cols:
         conn.execute("ALTER TABLE achievements ADD COLUMN secret INTEGER NOT NULL DEFAULT 0")
@@ -78,10 +82,36 @@ def _migrate(conn) -> None:
     if "manual" not in ach_cols:
         conn.execute("ALTER TABLE achievements ADD COLUMN manual INTEGER NOT NULL DEFAULT 0")
         conn.commit()
+    if "points" not in ach_cols:
+        # i valori veri li riscrive sync_achievements dal registry a ogni finalize
+        conn.execute("ALTER TABLE achievements ADD COLUMN points REAL NOT NULL DEFAULT 10.0")
+        conn.execute("ALTER TABLE achievements ADD COLUMN decay REAL NOT NULL DEFAULT 0.5")
+        conn.commit()
     conn.execute("""CREATE TABLE IF NOT EXISTS manual_awards (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         code TEXT NOT NULL, ts TEXT NOT NULL, context TEXT,
         PRIMARY KEY (user_id, code))""")
+    conn.commit()
+    conn.execute("""CREATE TABLE IF NOT EXISTS stitico_periods (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        from_ts TEXT NOT NULL, to_ts TEXT)""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_stitico_user ON stitico_periods(user_id)")
+    conn.execute("""CREATE TABLE IF NOT EXISTS weeks (
+        id INTEGER PRIMARY KEY,
+        start_ts TEXT NOT NULL UNIQUE, end_ts TEXT NOT NULL, closed_at TEXT NOT NULL,
+        winner_user_id INTEGER REFERENCES users(id),
+        contested INTEGER NOT NULL DEFAULT 0,
+        face_deposit_id INTEGER REFERENCES deposits(id),
+        face_closed_at TEXT)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS selfie_votes (
+        week_id INTEGER NOT NULL REFERENCES weeks(id) ON DELETE CASCADE,
+        deposit_id INTEGER NOT NULL REFERENCES deposits(id) ON DELETE CASCADE,
+        voter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5),
+        ts TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (week_id, deposit_id, voter_id))""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_votes_week ON selfie_votes(week_id)")
     conn.commit()
     conn.execute("""CREATE TABLE IF NOT EXISTS tg_link_tokens (
         token TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
@@ -368,6 +398,27 @@ def me_selfie_pref(request: Request, no_selfie: str = Form(None), conn=Depends(g
     return RedirectResponse("/me", status_code=303)
 
 
+@app.post("/me/stitico")
+def me_stitico(request: Request, stitico: str = Form(None), conn=Depends(get_db)):
+    """La dichiarazione di stitichezza vale DA ADESSO e finisce quando la
+    togli: si apre e si chiude un periodo, non si sposta un booleano. Così i
+    Gnnn! già guadagnati restano dove sono anche se cambi idea."""
+    require_login(request)
+    uid = request.session["uid"]
+    on = bool(stitico)
+    cur = conn.execute("SELECT stitico FROM users WHERE id=?", (uid,)).fetchone()
+    if on and not cur["stitico"]:
+        conn.execute(
+            "INSERT INTO stitico_periods (user_id, from_ts) VALUES (?, datetime('now'))", (uid,))
+    elif not on and cur["stitico"]:
+        conn.execute(
+            """UPDATE stitico_periods SET to_ts = datetime('now')
+               WHERE user_id=? AND to_ts IS NULL""", (uid,))
+    conn.execute("UPDATE users SET stitico=? WHERE id=?", (int(on), uid))
+    conn.commit()
+    return RedirectResponse("/me", status_code=303)
+
+
 @app.post("/me/selfies/delete")
 def me_delete_selfies(request: Request, conn=Depends(get_db)):
     require_login(request)
@@ -381,6 +432,47 @@ def me_delete(request: Request, conn=Depends(get_db)):
     data.delete_user(conn, request.session["uid"], MEDIA_DIR)
     request.session.clear()
     return RedirectResponse("/", status_code=303)
+
+
+# --- Faccia di merda della settimana --------------------------------------
+
+@app.get("/vote", response_class=HTMLResponse)
+def vote_page(request: Request, conn=Depends(get_db)):
+    require_login(request)   # i selfie stanno dietro login, e il voto pure
+    week = faces.open_vote_week(conn)
+    cands = faces.candidates(conn, week["id"], request.session["uid"]) if week else []
+    return templates.TemplateResponse(request, "vote.html", _ctx(
+        request, week=week, cands=cands, max_vote=config.FACE_MAX_VOTE,
+        me=request.session.get("name"), admin=is_admin(request)))
+
+
+@app.post("/api/vote")
+def api_vote(request: Request, deposit_id: int = Form(...), score: int = Form(...),
+             conn=Depends(get_db)):
+    require_login(request)
+    week = faces.open_vote_week(conn)
+    if week is None:
+        raise HTTPException(status_code=409, detail="voto chiuso")
+    ok = faces.cast_vote(conn, week["id"], deposit_id, request.session["uid"], score)
+    if not ok:
+        raise HTTPException(status_code=400, detail="voto non valido")
+    return {"ok": True, "deposit_id": deposit_id, "score": score}
+
+
+@app.post("/api/vote/undo")
+def api_vote_undo(request: Request, deposit_id: int = Form(...), conn=Depends(get_db)):
+    require_login(request)
+    week = faces.open_vote_week(conn)
+    if week is None:
+        raise HTTPException(status_code=409, detail="voto chiuso")
+    faces.clear_vote(conn, week["id"], deposit_id, request.session["uid"])
+    return {"ok": True, "deposit_id": deposit_id, "score": None}
+
+
+@app.get("/api/weeks")
+def api_weeks(conn=Depends(get_db)):
+    return {"leaderboard": weeks.weeks_leaderboard(conn),
+            "history": weeks.week_history(conn)}
 
 
 @app.get("/media/flag/{uid}")

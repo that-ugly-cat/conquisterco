@@ -68,16 +68,18 @@ web = [
     { name = "itsdangerous" },
     { name = "jinja2" },
     { name = "python-multipart" },
+    { name = "starlette" },
     { name = "uvicorn" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "fastapi", marker = "extra == 'web'", specifier = ">=0.110" },
+    { name = "fastapi", marker = "extra == 'web'", specifier = "==0.139.0" },
     { name = "itsdangerous", marker = "extra == 'web'", specifier = ">=2.1" },
     { name = "jinja2", marker = "extra == 'web'", specifier = ">=3.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "python-multipart", marker = "extra == 'web'", specifier = ">=0.0.9" },
+    { name = "starlette", marker = "extra == 'web'", specifier = "==1.3.1" },
     { name = "uvicorn", marker = "extra == 'web'", specifier = ">=0.29" },
 ]
 provides-extras = ["dev", "web"]

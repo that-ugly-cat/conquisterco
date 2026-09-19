@@ -23,6 +23,7 @@ CREATE TABLE users (
     home_lat      REAL,                         -- home base (record "trasferta")
     home_lon      REAL,
     no_selfie     INTEGER NOT NULL DEFAULT 0,    -- preferenza: il bot non salva i selfie
+    stitico       INTEGER NOT NULL DEFAULT 0,    -- autodichiarazione: ogni cacata vale un Gnnn!
     role          TEXT    NOT NULL DEFAULT 'user'
                           CHECK (role IN ('user', 'admin')),
     password_hash TEXT,
@@ -121,8 +122,52 @@ CREATE TABLE achievements (
     icon_ref     TEXT,
     secret       INTEGER NOT NULL DEFAULT 0,   -- nascosto dalla legenda (assegnato comunque)
     manual       INTEGER NOT NULL DEFAULT 0,   -- assegnato a mano dal Sistema (manual_awards)
+    points       REAL    NOT NULL DEFAULT 10.0, -- punti della prima presa       [dal registry]
+    decay        REAL    NOT NULL DEFAULT 0.5,  -- ratio fra prese successive    [dal registry]
     active       INTEGER NOT NULL DEFAULT 1
 );
+
+-- Storia delle dichiarazioni di stitichezza.                [grezza]
+-- Non basta un booleano: il motore rivaluta sempre tutto lo storico, quindi un
+-- flag alzato oggi regalerebbe un Gnnn! a ogni cacata dal 2018, e uno abbassato
+-- domani li toglierebbe tutti. Qui si tiene QUANDO valeva, e Gnnn! premia i
+-- depositi caduti dentro un periodo. to_ts NULL = ancora aperto.
+CREATE TABLE stitico_periods (
+    id       INTEGER PRIMARY KEY,
+    user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    from_ts  TEXT    NOT NULL,
+    to_ts    TEXT
+);
+CREATE INDEX idx_stitico_user ON stitico_periods(user_id);
+
+-- Settimane di gioco.                                       [grezza]
+-- Le chiude il recap e non si ricalcolano: quello che il bot ha annunciato al
+-- gruppo resta il verdetto. Le settimane antecedenti al primo recap (storico
+-- WhatsApp) sono riempite retroattivamente sulla griglia dei lunedi', una volta
+-- sola. Vincitore NULL + contested=1 = parita' in testa, non l'ha vinta nessuno.
+CREATE TABLE weeks (
+    id              INTEGER PRIMARY KEY,
+    start_ts        TEXT    NOT NULL UNIQUE,     -- dove e' finita la settimana prima
+    end_ts          TEXT    NOT NULL,            -- istante del recap che l'ha chiusa
+    closed_at       TEXT    NOT NULL,
+    winner_user_id  INTEGER REFERENCES users(id),
+    contested       INTEGER NOT NULL DEFAULT 0,
+    face_deposit_id INTEGER REFERENCES deposits(id),  -- faccia di merda eletta
+    face_closed_at  TEXT                         -- quando si e' chiuso il voto
+);
+
+-- Voti alla faccia di merda.                                [grezza]
+-- Dato grezzo come i depositi: il finalize non la tocca. Un voto per votante
+-- per selfie, sovrascrivibile; l'undo cancella la riga.
+CREATE TABLE selfie_votes (
+    week_id    INTEGER NOT NULL REFERENCES weeks(id) ON DELETE CASCADE,
+    deposit_id INTEGER NOT NULL REFERENCES deposits(id) ON DELETE CASCADE,
+    voter_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    score      INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5),
+    ts         TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (week_id, deposit_id, voter_id)
+);
+CREATE INDEX idx_votes_week ON selfie_votes(week_id);
 
 -- Badge assegnati.                                         [derivata]
 CREATE TABLE awards (

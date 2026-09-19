@@ -37,6 +37,8 @@ class AchievementDef:
     secret: bool
     manual: bool   # assegnato a mano dal Sistema (via manual_awards), non derivato
     fn: Callable[["EvalContext"], list[Award]]
+    points: float   # punti della PRIMA presa (config.SCORE_PT_BADGE se non dichiarato)
+    decay: float    # ratio fra una presa e la successiva (1.0 = nessun calo)
 
 
 REGISTRY: dict[str, AchievementDef] = {}
@@ -44,11 +46,19 @@ REGISTRY: dict[str, AchievementDef] = {}
 
 def achievement(code: str, name: str, description: str, *,
                 type: str = "repeatable", icon: str | None = None,
-                secret: bool = False, manual: bool = False):
+                secret: bool = False, manual: bool = False,
+                points: float | None = None, decay: float | None = None):
+    """`points`/`decay` sovrascrivono i default di config per QUESTO badge: e'
+    la deroga che serve a un ripetibile a valore fisso (Gnnn!, 3 punti tondi a
+    ogni cacata) dentro un sistema che altrimenti fa calare le prese ripetute."""
     def deco(fn: Callable[["EvalContext"], list[Award]]):
         if code in REGISTRY:
             raise ValueError(f"achievement duplicato: {code}")
-        REGISTRY[code] = AchievementDef(code, name, description, type, icon, secret, manual, fn)
+        REGISTRY[code] = AchievementDef(
+            code, name, description, type, icon, secret, manual, fn,
+            config.SCORE_PT_BADGE if points is None else points,
+            config.SCORE_BADGE_DECAY if decay is None else decay,
+        )
         return fn
     return deco
 
@@ -115,6 +125,22 @@ class EvalContext:
         self.replay = replay_flips(
             self.flips, self.territory_country, track_countries=("PL",),
         )
+
+        # stitici: non il booleano ma i PERIODI in cui valeva. Il motore rivaluta
+        # sempre tutto lo storico, quindi un flag letto al presente regalerebbe
+        # un Gnnn! a ogni cacata del 2018 — e spegnendolo li toglierebbe tutti.
+        self.stitico_periods: dict[int, list[tuple[str, str | None]]] = defaultdict(list)
+        for r in conn.execute("SELECT user_id, from_ts, to_ts FROM stitico_periods"):
+            self.stitico_periods[r["user_id"]].append((r["from_ts"], r["to_ts"]))
+
+        # facce di merda proclamate (persistenti in `weeks`, non derivate dai dump)
+        self.faces = [
+            {"user_id": r["user_id"], "ts": r["ts"], "week_end": r["week_end"]}
+            for r in conn.execute(
+                """SELECT d.user_id, d.ts, w.end_ts AS week_end
+                   FROM weeks w JOIN deposits d ON d.id = w.face_deposit_id
+                   WHERE w.face_deposit_id IS NOT NULL""")
+        ]
 
         # assegnazioni manuali del "Sistema" (persistenti, non derivate dai dump)
         self.manual_awards = [
@@ -868,6 +894,34 @@ def _teano(ctx: EvalContext) -> list[Award]:
     return out
 
 
+@achievement("gnnn", "Gnnn!",
+             "Sei dichiarato stitico: ogni cacata è una conquista, e vale.",
+             icon="😫", points=config.GNNN_POINTS, decay=1.0)
+def _gnnn(ctx: EvalContext) -> list[Award]:
+    """Un Gnnn! per ogni deposito fatto MENTRE eri dichiarato stitico.
+    Punti fissi e nessun decadimento (config.GNNN_POINTS): è l'handicap, e un
+    handicap che si sgonfia dopo tre giorni non è un handicap."""
+    out = []
+    for uid, periods in ctx.stitico_periods.items():
+        for d in ctx.deposits_by_user.get(uid, []):
+            if any(a <= d["ts"] and (b is None or d["ts"] < b) for a, b in periods):
+                out.append(Award("gnnn", uid, d["ts"], d["name"] or ""))
+    return out
+
+
+@achievement("faccia_di_merda", "Faccia di Merda",
+             "Il gruppo ha votato il tuo selfie come il peggiore della settimana.",
+             icon="💩")
+def _faccia_di_merda(ctx: EvalContext) -> list[Award]:
+    """Ripetibile: una per settimana vinta. Non e' calcolato da niente — si
+    rilegge la proclamazione salvata in `weeks`, che e' dato grezzo quanto un
+    deposito. Datato sul selfie, cosi' il badge sta nel punto giusto della
+    storia e non si sposta ai ricalcoli."""
+    return [Award("faccia_di_merda", f["user_id"], f["ts"],
+                  f"settimana chiusa il {f['week_end'][:10]}")
+            for f in ctx.faces]
+
+
 # ---------------------------------------------------------------------------
 # Sync metadati + evaluate
 # ---------------------------------------------------------------------------
@@ -876,13 +930,16 @@ def sync_achievements(conn: sqlite3.Connection) -> None:
     """Allinea la tabella `achievements` col registry (upsert per code)."""
     for d in REGISTRY.values():
         conn.execute(
-            """INSERT INTO achievements (code, name, description, type, icon_ref, secret, manual, active)
-               VALUES (?,?,?,?,?,?,?,1)
+            """INSERT INTO achievements (code, name, description, type, icon_ref,
+                                        secret, manual, points, decay, active)
+               VALUES (?,?,?,?,?,?,?,?,?,1)
                ON CONFLICT(code) DO UPDATE SET
                  name=excluded.name, description=excluded.description,
                  type=excluded.type, icon_ref=excluded.icon_ref,
-                 secret=excluded.secret, manual=excluded.manual""",
-            (d.code, d.name, d.description, d.type, d.icon, int(d.secret), int(d.manual)),
+                 secret=excluded.secret, manual=excluded.manual,
+                 points=excluded.points, decay=excluded.decay""",
+            (d.code, d.name, d.description, d.type, d.icon, int(d.secret),
+             int(d.manual), d.points, d.decay),
         )
     conn.commit()
 

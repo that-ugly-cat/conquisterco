@@ -27,6 +27,7 @@ from ..elevation import enrich_altitude
 from ..enrich_osm import enrich_deposits_osm
 from ..ingest import add_deposit
 from ..pipeline import finalize
+from .. import faces, weeks
 from ..util import parse_ts
 from . import data, triggers
 from .translations import TRANSLATIONS
@@ -379,17 +380,35 @@ _NUDGE = [
 ]
 
 
-def _recap_message(recap: dict) -> str | None:
-    dumpers, slackers = recap["dumpers"], recap["slackers"]
-    if not dumpers and not slackers:
+def _recap_message(recap: dict, *, face: dict | None = None,
+                   vote_url: str | None = None) -> str | None:
+    ranked, slackers = recap["ranked"], recap["slackers"]
+    if not ranked and not slackers:
         return None   # niente da dire
     lines = ["🇮🇹 📅 Recap della settimana — il cacasto fecale tira le somme.",
              "🇬🇧 📅 Weekly recap — the fecal cadastre tallies up.", ""]
-    if dumpers:
-        lines += [f"{i}. {name} — {n} 💩" for i, (name, n) in enumerate(dumpers, 1)]
+    if ranked:
+        lines += ["🇮🇹 📈 Punti della settimana (le cacate fra parentesi):",
+                  "🇬🇧 📈 Points this week (dumps in brackets):"]
+        lines += [f"{i}. {name} — {pts} pt ({n} 💩)"
+                  for i, (name, pts, n) in enumerate(ranked, 1)]
+        if recap.get("winner"):
+            lines += ["", f"🇮🇹 👑 Vince la settimana: {recap['winner']}.",
+                      f"🇬🇧 👑 Winner of the week: {recap['winner']}."]
+        elif recap.get("contested"):
+            lines += ["", "🇮🇹 ⚔️ Parità in testa: settimana contesa, non la vince nessuno.",
+                      "🇬🇧 ⚔️ Tie at the top: contested week, nobody wins it."]
     else:
         lines += ["🇮🇹 Nessuno ha cagato. Silenzio tombale (e intestinale).",
                   "🇬🇧 Nobody dumped. Deathly (and intestinal) silence."]
+    if face:
+        lines += ["", f"🇮🇹 💩 Faccia di merda della settimana scorsa: {face['author']} "
+                      f"({face['total']} 💩 da {face['voters']} votanti).",
+                  f"🇬🇧 💩 Last week's shit face: {face['author']} "
+                  f"({face['total']} 💩 from {face['voters']} voters)."]
+    if vote_url:
+        lines += ["", f"🇮🇹 🗳️ Vota la faccia di merda di questa settimana: {vote_url}",
+                  f"🇬🇧 🗳️ Vote this week's shit face: {vote_url}"]
     podium = recap.get("podium") or []
     if podium:
         lines += ["", "🇮🇹 🏆 Podio a punti — chi domina il cacasto:",
@@ -404,8 +423,30 @@ def _recap_message(recap: dict) -> str | None:
 
 
 def send_weekly_recap(conn, client=None) -> bool:
-    """Costruisce e invia il recap al gruppo. Ritorna True se inviato."""
-    msg = _recap_message(data.weekly_recap(conn))
+    """Il recap è l'evento che chiude la settimana, non solo il messaggio che la
+    racconta. Nell'ordine: proclama la faccia di merda votata (quella della
+    settimana prima, il cui voto si chiude adesso), chiude la settimana in
+    corso scrivendone il verdetto, e apre il voto sui selfie appena chiusi.
+
+    Il finalize dopo la proclamazione serve a far comparire il badge della
+    faccia di merda, che si rilegge da `weeks`. Ritorna True se ha inviato."""
+    prev = faces.open_vote_week(conn)
+    elected = faces.elect(conn, prev["id"]) if prev else None
+    closed = weeks.close_due_weeks(conn, closing_now=True)
+    week = closed[-1] if closed else None
+    if week:
+        # il verdetto della settimana è appena nato: rigenera gli award
+        finalize(conn)
+
+    face = None
+    if elected:
+        face = {"author": elected["author"], "total": elected["total"],
+                "voters": elected["voters"]}
+    vote_url = None
+    if week and PUBLIC_URL and faces.candidates(conn, week["id"]):
+        vote_url = f"{PUBLIC_URL.rstrip('/')}/vote"
+
+    msg = _recap_message(data.weekly_recap(conn, week), face=face, vote_url=vote_url)
     if not msg or not ALLOWED_CHAT:
         return False
     (client or TelegramClient()).send_message(ALLOWED_CHAT, msg)

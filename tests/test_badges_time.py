@@ -130,23 +130,48 @@ def test_punteggio_ordina_la_classifica(conn, geo):
     assert scores == sorted(scores, reverse=True)   # ordinata per punteggio desc
 
 
-def test_badge_ripetibili_una_volta_e_segreti_doppi(conn, geo):
+def test_badge_ripetibili_danno_sempre_punti_ma_calanti(conn, geo):
+    """Ogni presa conta, anche la seconda dello stesso badge — ma vale meno."""
     from conquisterco import config
     from conquisterco.ingest import add_user
-    from conquisterco.leaderboards import _badge_counts, _score
+    from conquisterco.leaderboards import _decayed, badge_points
     a = add_user(conn, "A")
     dep(conn, a, 1012, "2025-01-01 10:00:00")   # colonizzatore + capodanno'25 + ultima'25
     dep(conn, a, 1012, "2026-01-01 10:00:00")   # capodanno'26 + ultima'26 (ripetibili ×2)
+    run_all(conn, geo)
+
+    pts = badge_points(conn)[a]
+    # la seconda presa di un ripetibile aggiunge punti, ma meno della prima
+    doppi = [r["n"] for r in conn.execute(
+        """SELECT COUNT(*) AS n FROM awards w JOIN achievements a ON a.id=w.achievement_id
+           WHERE w.user_id=? GROUP BY a.id HAVING n > 1""", (a,))]
+    assert doppi, "il caso di prova deve contenere un badge preso più volte"
+    d = config.SCORE_BADGE_DECAY
+    assert pts > config.SCORE_PT_BADGE * len(list(conn.execute(
+        "SELECT DISTINCT achievement_id FROM awards WHERE user_id=?", (a,)))) - 1e-9
+    # e una presa in piu' non vale mai come la prima
+    assert _decayed(10.0, d, 2) < 2 * _decayed(10.0, d, 1)
+
+
+def test_badge_segreti_valgono_doppio(conn, geo):
+    from conquisterco import config
+    from conquisterco.ingest import add_user
+    from conquisterco.leaderboards import _decayed, badge_points
     b = add_user(conn, "B")
     dep(conn, b, 1005, "2026-05-01 10:00:00")   # Venezia → serenissima (SEGRETO) + altri
     run_all(conn, geo)
 
-    nb_a, sb_a = _badge_counts(conn)[a]
-    assert nb_a == 3 and sb_a == 0            # ripetibili contano una volta per tipo
-    nb_b, sb_b = _badge_counts(conn)[b]
-    assert sb_b >= 1                           # serenissima è segreto
-    # il segreto pesa doppio nella somma
-    assert _score(0, 0, (nb_b, sb_b)) == config.SCORE_PT_BADGE * (nb_b + config.SCORE_SECRET_MULT * sb_b)
+    atteso = 0.0
+    for r in conn.execute(
+        """SELECT a.secret, a.points, a.decay, COUNT(*) AS n
+           FROM awards w JOIN achievements a ON a.id=w.achievement_id
+           WHERE w.user_id=? GROUP BY a.id""", (b,)):
+        atteso += _decayed(r["points"], r["decay"], r["n"]) * (
+            config.SCORE_SECRET_MULT if r["secret"] else 1)
+    assert conn.execute(
+        """SELECT COUNT(*) FROM awards w JOIN achievements a ON a.id=w.achievement_id
+           WHERE w.user_id=? AND a.secret=1""", (b,)).fetchone()[0] >= 1
+    assert badge_points(conn)[b] == atteso
 
 
 def test_gatto_sul_cesso_manuale_sopravvive_al_finalize(conn, geo):

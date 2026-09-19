@@ -7,6 +7,13 @@ from datetime import datetime
 
 TS_FMT = "%Y-%m-%d %H:%M:%S"
 
+VIDEO_EXT = {"mp4", "mov", "webm", "mkv", "avi", "3gp", "m4v", "ogv"}
+
+
+def is_video(ref: str | None) -> bool:
+    """Un selfie e' un video? Si guarda l'estensione del file salvato."""
+    return bool(ref) and "." in ref and ref.rsplit(".", 1)[-1].lower() in VIDEO_EXT
+
 
 def parse_ts(s: str) -> datetime:
     """Parsa un timestamp ISO-ish. Tollerante al separatore 'T'."""

@@ -82,6 +82,20 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .histo-val{font-size:.6rem;color:var(--muted);text-align:center;line-height:1;height:.8rem}
 .histo-bar{width:100%;background:var(--brown);border-radius:3px 3px 0 0;min-height:2px}
 .histo-lab{font-size:.62rem;color:var(--muted);text-align:center;margin-top:.25rem}
+/* Faccia di merda della settimana: voto a cacche in overlay sul selfie */
+.vote-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.8rem;max-width:900px;margin:.8rem auto 2rem;padding:0 1rem}
+.vcell{position:relative;margin:0;border-radius:10px;overflow:hidden;background:var(--paper);border:1px solid var(--line)}
+.vcell.voted{border-color:var(--accent);box-shadow:0 0 0 2px rgba(181,101,29,.25)}
+.vmedia{position:relative;display:block}
+.vcell img,.vcell video{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#000}
+.vpoop{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:.15rem;padding:.35rem .3rem;background:linear-gradient(transparent,rgba(0,0,0,.6))}
+.poop{background:none;border:0;cursor:pointer;font-size:1.5rem;line-height:1;padding:.1rem;filter:grayscale(1);opacity:.45;transition:filter .12s,opacity .12s,transform .12s}
+.poop:hover{transform:scale(1.15)}
+.poop.on{filter:none;opacity:1}
+.vcell figcaption{display:flex;justify-content:space-between;align-items:center;gap:.4rem;padding:.35rem .5rem;font-size:.72rem}
+.undo{background:none;border:0;color:var(--accent);cursor:pointer;font-size:.7rem;text-decoration:underline;padding:0;white-space:nowrap}
+.nowrap{white-space:nowrap}
+
 @media(max-width:680px){
   .prof-grid{grid-template-columns:1fr}
   .stat-grid{grid-template-columns:repeat(2,1fr)}

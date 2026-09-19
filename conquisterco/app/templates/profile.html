@@ -96,6 +96,18 @@
         </div>
       </section>
 
+      <!-- Stitico -->
+      <section class="card">
+        <h2>😫 Gnnn!</h2>
+        <form method="post" action="/me/stitico" class="stacked">
+          <label class="chk"><input type="checkbox" name="stitico" {% if s.stitico %}checked{% endif %}> {{ T.stitico_pref }} <span class="muted">{{ T.stitico_hint }}</span></label>
+          <button>{{ T.save_pref }}</button>
+        </form>
+        {% if s.stitico and s.stitico_since %}
+        <p class="muted">{{ T.stitico_since }} {{ s.stitico_since[:10] }}</p>
+        {% endif %}
+      </section>
+
       <!-- Selfie -->
       <section class="card">
         <h2>{{ T.selfie }}</h2>
