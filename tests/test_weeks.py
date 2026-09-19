@@ -269,3 +269,27 @@ def test_serve_anche_essere_attivi_adesso(conn, geo, monkeypatch):
     # la finestra e' agganciata a `now`: guardando fra un anno il reduce resta fuori
     dopo = {r["name"]: r for r in weeks.weeks_leaderboard(conn, now=now + timedelta(weeks=52))}
     assert dopo["Assiduo"]["ranked"] is False         # nel frattempo ha smesso anche lui
+
+
+def test_il_pannello_settimane_porta_facce_e_soglie(conn, geo):
+    """Le due classifiche attaccano le bandierine con la stessa funzione: se
+    una delle due smette di mostrarle, questo test cade."""
+    from conquisterco.app import data
+    a = add_user(conn, "A")
+    conn.execute("UPDATE users SET flag_ref='profiles/1/flag.png', color='#123456' WHERE id=?", (a,))
+    conn.commit()
+    now = datetime.now()
+    for w in (3, 2, 1):
+        dep(conn, a, 1012, _ts(now - timedelta(weeks=w)))
+    run_all(conn, geo)
+    weeks.close_due_weeks(conn)
+
+    pannello = data.weeks_panel(conn)
+    riga = next(r for r in pannello["leaderboard"] if r["user_id"] == a)
+    assert riga["flag"] == f"/media/flag/{a}" and riga["color"] == "#123456"
+    assert pannello["min_played"] == config.WEEKS_MIN_PLAYED
+    assert pannello["active_dumps"] == config.WEEKS_ACTIVE_DUMPS
+    assert pannello["active_window"] == config.WEEKS_ACTIVE_WINDOW
+    # e la classifica dei punti le attacca allo stesso modo
+    punti = next(r for r in data.leaderboard(conn)["main"] if r["user_id"] == a)
+    assert punti["flag"] == riga["flag"] and punti["color"] == riga["color"]

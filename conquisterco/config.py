@@ -92,14 +92,18 @@ MIN_WEEK_DAYS = 3
 # Chi non ci arriva NON sparisce, compare sotto la tabella: la classifica
 # principale include deliberatamente chiunque abbia giocato (SS4), e nasconderli
 # qui la contraddirebbe.
-WEEKS_MIN_PLAYED = 8
+# Quattro e non otto: con otto un giocatore nuovo aspettava due mesi prima di
+# comparire, e i due piu' attivi del gruppo (92 e 78 cacate in otto settimane)
+# erano fuori classifica per una settimana di anzianita' mancante. Con quattro
+# chi arriva entra in un mese.
+WEEKS_MIN_PLAYED = 4
 
 # Seconda condizione, di recenza: per stare in graduatoria non basta avere una
 # storia, bisogna esserci adesso. Attenzione, questa rende la classifica
 # **dipendente dall'ora in cui la guardi**: un giocatore ne esce da solo
 # smettendo di cagare, senza che cambi un dato. E' voluto.
-WEEKS_ACTIVE_WINDOW = 8    # settimane della finestra di attivita'
-WEEKS_ACTIVE_DUMPS = 8     # cacate che servono dentro la finestra
+WEEKS_ACTIVE_WINDOW = 4    # settimane della finestra di attivita'
+WEEKS_ACTIVE_DUMPS = 4     # cacate che servono dentro la finestra
 
 # --- Faccia di merda della settimana ---------------------------------------
 # Un selfie vale la SOMMA dei voti presi, non la media: vince chi raccoglie piu'

@@ -279,6 +279,10 @@ Per stare **in graduatoria** servono due cose insieme:
 - almeno `WEEKS_ACTIVE_DUMPS` **cacate nelle ultime `WEEKS_ACTIVE_WINDOW` settimane** —
   la storia non basta, bisogna esserci adesso.
 
+Entrambe valgono **4**: chi arriva nel gruppo entra in classifica dopo un mese. A 8 e 8 un
+nuovo aspettava due mesi, e i due giocatori più attivi in assoluto restavano fuori per una
+settimana di anzianità mancante — il contrario di quello che la soglia doveva fare.
+
 La seconda condizione rende questa classifica **dipendente dall'istante in cui la si
 guarda**: è l'unica cosa nel gioco che cambia senza che cambi un dato, e un giocatore ne
 esce da solo smettendo di cagare. È voluto — premia chi c'è — ma va saputo, perché

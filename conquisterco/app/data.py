@@ -13,7 +13,7 @@ AVG_DUMP_G = 128
 from ..leaderboards import _streaks, main_leaderboard, records
 from ..recompute import owner_of
 from ..util import is_video
-from .. import weeks
+from .. import config, weeks
 
 _RECORD_LABELS = {
     "nord": "Più a Nord", "sud": "Più a Sud", "est": "Più a Est", "ovest": "Più a Ovest",
@@ -198,14 +198,31 @@ def dumps_geo(conn: sqlite3.Connection) -> list[dict]:
     return out
 
 
-def leaderboard(conn: sqlite3.Connection) -> dict:
-    main = main_leaderboard(conn)
+def with_flags(conn: sqlite3.Connection, rows: list[dict]) -> list[dict]:
+    """Attacca bandierina e colore a righe che portano un `user_id`. Sta qui e
+    non in `leaderboards` perché è presentazione, e sta in **un posto solo**
+    perché lo usano sia la classifica dei punti sia quella delle settimane."""
     meta = {r["id"]: r for r in conn.execute("SELECT id, color, flag_ref FROM users")}
-    for row in main:
+    for row in rows:
         u = meta.get(row["user_id"])
         row["color"] = u["color"] if u else None
         row["flag"] = f"/media/flag/{row['user_id']}" if u and u["flag_ref"] else None
-    return {"main": main, "records": records(conn)}
+    return rows
+
+
+def leaderboard(conn: sqlite3.Connection) -> dict:
+    return {"main": with_flags(conn, main_leaderboard(conn)), "records": records(conn)}
+
+
+def weeks_panel(conn: sqlite3.Connection) -> dict:
+    """Tutto il pannello «settimane vinte»: graduatoria con le facce, storia
+    delle settimane chiuse, e le soglie — che servono al frontend per dire
+    quali sono, invece di ripeterle cablate in due posti."""
+    return {"leaderboard": with_flags(conn, weeks.weeks_leaderboard(conn)),
+            "history": weeks.week_history(conn),
+            "min_played": config.WEEKS_MIN_PLAYED,
+            "active_dumps": config.WEEKS_ACTIVE_DUMPS,
+            "active_window": config.WEEKS_ACTIVE_WINDOW}
 
 
 def feed(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
