@@ -42,8 +42,9 @@ in alto, trasferta più lontana…), oltre 50 achievement, e una mappa coropleti
 - **Cacca Nautica**: una cacata in acqua non ha un comune, quindi per il motore non
   esiste — non conquista niente e non fa punteggio. Questo badge è l'unica cosa che la
   vede.
-- **Gnnn!**: chi si dichiara stitico prende un badge a punti fissi a ogni cacata. La
-  dichiarazione è tenuta a periodi, così toglierla non cancella quello che hai già preso.
+- **Gnnn!**: chi si dichiara stitico prende un badge a ogni cacata, che decade come gli
+  altri ripetibili (pieno la prima volta, metà per sempre dopo). La dichiarazione è
+  tenuta a periodi, così toglierla non cancella quello che hai già preso.
 - **Record** superlativi, **feed** dei flip, **badge** (>50) con legenda: la scritta
   "N l'hanno preso" apre chi ce l'ha, il nome-badge apre "come si prende". **Galleria**
   per utente: i selfie si aprono in un **modale** (foto o video) con comune, data,

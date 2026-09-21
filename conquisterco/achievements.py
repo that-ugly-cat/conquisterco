@@ -916,11 +916,19 @@ def _teano(ctx: EvalContext) -> list[Award]:
 
 @achievement("gnnn", "Gnnn!",
              "Sei dichiarato stitico: ogni cacata è una conquista, e vale.",
-             icon="😫", points=config.GNNN_POINTS, decay=1.0)
+             icon="😫", points=config.GNNN_POINTS)
 def _gnnn(ctx: EvalContext) -> list[Award]:
     """Un Gnnn! per ogni deposito fatto MENTRE eri dichiarato stitico.
-    Punti fissi e nessun decadimento (config.GNNN_POINTS): è un incentivo a
-    cagare, e un incentivo che si sgonfia dopo tre giorni non incentiva niente.
+
+    Dichiara i suoi punti (`config.GNNN_POINTS`) ma **non** il decadimento:
+    decade come ogni altro ripetibile, quindi vale pieno la prima volta e metà
+    per sempre dopo. Fino al 21 set 2026 aveva anche `decay=1.0`, giustificato
+    con «un handicap che si sgonfia dopo tre giorni non è un handicap» — ma
+    Gnnn! non è un handicap, è un incentivo, e caduta la premessa restava
+    l'unico ripetibile trattato diversamente dagli altri. A punti fissi valeva
+    un badge ordinario pieno a ogni cacata: misurato sul cacasto vero, i 5
+    punti secchi raddoppiavano il valore di una cacata (la media del gruppo è
+    6,0 punti) e facevano il 48% del punteggio di chi li prendeva.
 
     Conta **anche le cacate in acqua**, che per il resto del motore non
     esistono (vedi `cacca_nautica`): se la regola è che cagare vale, vale anche

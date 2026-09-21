@@ -54,13 +54,19 @@ def test_gnnn_sopravvive_a_spegnere_il_flag(conn, geo):
     assert len(got) == 1 and got[0].ts_earned.startswith("2026-06-01")
 
 
-def test_gnnn_non_decade_mai(conn, geo):
-    """L'incentivo e' a valore fisso: la decima cacata vale come la prima."""
+def test_gnnn_decade_come_tutti_gli_altri(conn, geo):
+    """Dichiara i punti ma NON il decadimento (la deroga e' caduta il 21 set
+    2026): pieno la prima volta, poi il pavimento a meta' per sempre."""
     from conquisterco.achievements import REGISTRY
     from conquisterco.leaderboards import _decayed
     assert REGISTRY["gnnn"].points == config.GNNN_POINTS
-    assert REGISTRY["gnnn"].decay == 1.0
-    assert _decayed(config.GNNN_POINTS, 1.0, 10) == config.GNNN_POINTS * 10
+    assert REGISTRY["gnnn"].decay == config.SCORE_BADGE_DECAY
+    p, d = config.GNNN_POINTS, config.SCORE_BADGE_DECAY
+    # la prima vale pieno, la decima vale il pavimento, e dieci prese non fanno
+    # dieci volte la prima: e' esattamente cio' che il valore fisso faceva.
+    assert _decayed(p, d, 1) == p
+    assert _decayed(p, d, 10) - _decayed(p, d, 9) == p / 2
+    assert _decayed(p, d, 10) < p * 10
 
 
 def test_gnnn_entra_nel_punteggio(conn, geo):

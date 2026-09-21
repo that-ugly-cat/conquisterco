@@ -65,8 +65,7 @@ TRIP_WINDOW_DAYS = 5       # Fuck Brexit / Barbarossa / Cortina di carta igienic
 # punto-badge per volta. È deliberato — senza, dalla quinta presa in poi
 # «danno sempre punti» era vero solo sulla carta.
 # Un badge può dichiarare i suoi punti e il suo decadimento nel registry
-# (`@achievement(..., points=…, decay=…)`): è così che Gnnn! vale punti tondi
-# a ogni cacata, senza decadere.
+# (`@achievement(..., points=…, decay=…)`); nessuno dichiara più il secondo.
 SCORE_PT_COMUNE = 10.0     # punti per comune posseduto
 SCORE_PT_KM2 = 0.01        # punti per km² (→ 100 km² = 1 punto)
 SCORE_PT_BADGE = 10.0      # punti del badge, default se non lo dichiara
@@ -74,12 +73,21 @@ SCORE_BADGE_DECAY = 0.5    # ratio di decadimento fra una presa e la successiva
 SCORE_SECRET_MULT = 2      # i badge segreti valgono doppio
 
 # --- Stitici ---------------------------------------------------------------
-# Cinque e non tre: simulato il 19 set 2026 sulle 443 settimane di storico, con
-# tre punti il bonus ribaltava 5 settimane su 59 ad Angela_B e con quattro ne
-# ribaltava 6 — il quarto punto non comprava niente. A cinque diventano 9.
 # Non e' un handicap ma un incentivo (decisione di Spit): premia la frequenza, e
 # va bene così, perche' lo scopo dichiarato e' far cagare di piu'.
-GNNN_POINTS = 5.0          # punti di ogni Gnnn! (niente decadimento)
+#
+# Sono i punti della PRIMA presa: dalla seconda in poi Gnnn! decade come ogni
+# altro ripetibile e si ferma sul pavimento, cioe' 2,5 punti a cacata per
+# sempre. Fino al 21 set 2026 erano 5 secchi ogni volta, e la deroga era
+# sbagliata due volte: la sua motivazione parlava di un handicap (che Gnnn! non
+# e'), e il risultato valeva un badge ordinario pieno a ogni cacata. Misurato
+# sul cacasto vero: una cacata vale in media 6,0 punti nel gruppo, e i 5 secchi
+# la raddoppiavano; erano il 48% del punteggio di chi li prendeva, e il 20 set
+# hanno vinto la prima settimana annunciata con 5 cacate contro 13.
+# Il valore e' tarato sulle 444 settimane: fra 2, 2,5 e 3 punti a regime i
+# verdetti settimanali sono identici (18 settimane), quindi la banda si sceglie
+# guardando la classifica lifetime, non il gioco settimanale.
+GNNN_POINTS = 5.0          # punti del primo Gnnn! (poi 2,5, come i ripetibili)
 
 # --- Settimane -------------------------------------------------------------
 # La settimana la chiude il recap. Sotto questa durata non si chiude niente:

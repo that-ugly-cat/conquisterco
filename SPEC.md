@@ -93,9 +93,20 @@ mezzo punto-badge per volta.
 
 Un badge può **dichiarare i suoi punti e il suo decadimento** nel registry
 (`@achievement(..., points=..., decay=...)`), e la coppia finisce in colonna nella
-tabella `achievements` a ogni `sync`. È la deroga che serve a un ripetibile a valore
-fisso: **Gnnn!** vale `GNNN_POINTS` tondi a ogni cacata, `decay=1.0`, perché un handicap
-che si sgonfia dopo tre giorni non è un handicap.
+tabella `achievements` a ogni `sync`. **Gnnn!** dichiara i punti (`GNNN_POINTS`, 5) e
+basta: decade come tutti, quindi 5 la prima volta e 2,5 per sempre dopo.
+
+> **La deroga sul decadimento è caduta il 21 set 2026.** Gnnn! aveva `decay=1.0`,
+> motivato con «un handicap che si sgonfia dopo tre giorni non è un handicap» — ma
+> Gnnn! è un **incentivo**, non un handicap, e caduta la premessa restava l'unico
+> ripetibile trattato diversamente dagli altri senza una ragione. Misurato sul cacasto
+> vero prima di toccarlo: a punti fissi valeva **un badge ordinario pieno a ogni
+> cacata** (simularlo come badge da 10 a decadimento normale dava lo stesso totale a
+> meno di 5 punti), cioè raddoppiava il valore di una cacata rispetto ai 6,0 punti di
+> media del gruppo, e faceva il **48%** del punteggio di chi lo prendeva. Nessun altro
+> ripetibile paga senza un evento sotto: un comune nuovo, un turno di notte, una
+> nazione nuova. Ora ne vale metà, che è la taglia giusta per «hai fatto la cosa che il
+> gioco già premia».
 
 ---
 
@@ -191,11 +202,18 @@ conquistare.
 ### Gnnn! — il badge degli stitici
 
 Dal profilo ci si può **dichiarare stitici**. Da quel momento ogni cacata frutta un
-**Gnnn!** (`GNNN_POINTS` punti, nessun decadimento). Non è un handicap ma un **incentivo**:
-paga in proporzione a quante volte caghi, e va bene così perché lo scopo è far cagare di
-più. Il valore è stato scelto simulando sulle 443 settimane di storico — a tre punti il
-bonus ribaltava 5 settimane su 59 alla giocatrice piu' assidua fra le stitiche, a quattro
-ne ribaltava 6 (il quarto punto non comprava niente), a cinque ne ribalta 9.
+**Gnnn!**: `GNNN_POINTS` (5) la prima volta, **2,5 tutte le altre**, perché decade come
+ogni altro ripetibile (§4). Non è un handicap ma un **incentivo**: paga in proporzione a
+quante volte caghi, e va bene così perché lo scopo è far cagare di più.
+
+Il valore è tarato sulle 444 settimane di storico, e la taratura dice una cosa sola:
+**fra 2, 2,5 e 3 punti a regime i verdetti settimanali sono identici** (18 settimane
+vinte dalla stitica più assidua, gli stessi 4 verdetti diversi da quelli a 5). Dentro
+quella banda si sceglie guardando la classifica lifetime, non il gioco settimanale. A 5
+secchi erano 21, e il 20 set 2026 il bonus ha vinto la **prima settimana mai annunciata
+al gruppo** con 5 cacate contro le 13 del secondo: 40,0 punti contro 37,1, di cui 25 di
+solo Gnnn!. Quel verdetto **resta** — è annunciato, e un verdetto annunciato non si
+ricalcola (§8) — ma è il caso che ha fatto cadere la deroga.
 
 La dichiarazione **non è un booleano ma una storia**: `stitico_periods` tiene i periodi
 in cui valeva, e Gnnn! premia i depositi caduti dentro. Serve perché il motore rivaluta
@@ -203,9 +221,9 @@ sempre tutto lo storico — un flag letto al presente regalerebbe un Gnnn! a ogn
 del 2018, e spegnendolo li toglierebbe tutti in blocco. Con i periodi si può smettere di
 dichiararsi stitici senza perdere quello che si è guadagnato.
 
-> È **autodichiarato** e nessuno lo verifica: chi vuole barare se lo spunta e prende 3
-> punti a cacata. Scelta deliberata — il controllo sociale del gruppo costa meno di un
-> motore anti-frode, e la data di dichiarazione è pubblica sul profilo.
+> È **autodichiarato** e nessuno lo verifica: chi vuole barare se lo spunta e prende
+> 2,5 punti a cacata. Scelta deliberata — il controllo sociale del gruppo costa meno di
+> un motore anti-frode, e la data di dichiarazione è pubblica sul profilo.
 
 ### Badge segreti
 
