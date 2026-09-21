@@ -77,11 +77,11 @@ def test_i_pin_restano_le_foto_no(conn, geo):
     assert data.dumps_geo(conn, tale)[0]["has_photo"] is True
 
 
-def test_un_ristretto_e_fuori_dal_voto(conn, geo):
+def test_un_ristretto_e_fuori_dal_voto(conn, geo, domenica):
     """La superficie piu' pericolosa: un selfie ristretto messo ai voti
     verrebbe mostrato a tutti, e il vincitore ripubblicato in chat dal recap."""
     ris, altro, terzo = (add_user(conn, n) for n in ("Ris", "Altro", "Terzo"))
-    now = datetime.now()
+    now = domenica
     suo = dep(conn, ris, 1012, _ts(now - timedelta(hours=6)))
     dep(conn, altro, 1005, _ts(now - timedelta(hours=5)))
     run_all(conn, geo)
@@ -96,7 +96,7 @@ def test_un_ristretto_e_fuori_dal_voto(conn, geo):
     assert faces.cast_vote(conn, week["id"], suo, terzo, 5) is False
 
 
-def test_il_recap_non_ripubblica_una_foto_ristretta(conn, geo, tmp_path, monkeypatch):
+def test_il_recap_non_ripubblica_una_foto_ristretta(conn, geo, tmp_path, monkeypatch, domenica):
     """Cintura e bretelle. Se per un errore a monte un ristretto risultasse
     eletto, la foto non deve comunque partire verso la chat."""
     from conquisterco.app import bot
@@ -104,7 +104,7 @@ def test_il_recap_non_ripubblica_una_foto_ristretta(conn, geo, tmp_path, monkeyp
 
     monkeypatch.setattr(bot, "ALLOWED_CHAT", "1")
     ris, altro = add_user(conn, "Ris"), add_user(conn, "Altro")
-    now = datetime.now()
+    now = domenica
     suo = dep(conn, ris, 1012, _ts(now - timedelta(hours=6)))
     run_all(conn, geo)
     (tmp_path / "x.jpg").write_bytes(b"byte")
@@ -229,3 +229,34 @@ def test_passare_a_ristretto_accende_la_pulizia_anche_senza_javascript(monkeypat
     main.me_selfie_pref(Req(), livello="ristretto", ammessi=[], pulisci_chat=None, conn=conn)
     assert conn.execute("SELECT pulisci_chat FROM users WHERE id=?", (a,)).fetchone()[0] == 0
     conn.close()
+
+
+def test_chi_diventa_ristretto_a_meta_settimana_esce_anche_dallo_spoglio(conn, geo, domenica):
+    """Il buco trovato il 21 set: filtrare i candidati e rifiutare i voti nuovi
+    non basta. Chi passa a ristretto dopo essere stato votato si porta dietro i
+    voti presi, e senza questo filtro vincerebbe — con proclamazione a nome suo
+    su un selfie che nessuno puo' piu' vedere."""
+    tizio, caio, votante = (add_user(conn, n) for n in ("Tizio", "Caio", "Votante"))
+    now = domenica
+    suo = dep(conn, tizio, 1012, _ts(now - timedelta(hours=6)))
+    altro = dep(conn, caio, 1005, _ts(now - timedelta(hours=5)))
+    run_all(conn, geo)
+    week = weeks.close_due_weeks(conn, closing_now=True)[-1]
+
+    # mentre e' pubblico prende piu' voti di tutti
+    assert faces.cast_vote(conn, week["id"], suo, votante, 5)
+    assert faces.cast_vote(conn, week["id"], suo, caio, 5)
+    assert faces.cast_vote(conn, week["id"], altro, votante, 1)
+    assert faces.tally(conn, week["id"])[0]["deposit_id"] == suo
+
+    # poi si mette in ristretto: esce dallo spoglio, e non puo' vincere
+    _livello(conn, tizio, visibilita.RISTRETTO)
+    spoglio = faces.tally(conn, week["id"])
+    assert [r["deposit_id"] for r in spoglio] == [altro]
+
+    vincitore = faces.elect(conn, week["id"])
+    assert vincitore is None or vincitore["deposit_id"] != suo
+
+    # i voti restano pero' in tabella: tornando pubblico tornano a contare
+    assert conn.execute("SELECT COUNT(*) FROM selfie_votes WHERE deposit_id=?",
+                        (suo,)).fetchone()[0] == 2

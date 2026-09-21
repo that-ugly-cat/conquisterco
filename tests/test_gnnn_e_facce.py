@@ -76,10 +76,10 @@ def test_gnnn_entra_nel_punteggio(conn, geo):
 
 # --- Faccia di merda -------------------------------------------------------
 
-def _settimana_con_selfie(conn, geo):
+def _settimana_con_selfie(conn, geo, quando):
     """Chiude una settimana che contiene i selfie di due giocatori."""
     a, b = add_user(conn, "A"), add_user(conn, "B")
-    now = datetime.now()
+    now = quando
     da = dep(conn, a, 1012, _ts(now - timedelta(hours=6)))
     db = dep(conn, b, 1005, _ts(now - timedelta(hours=5)))
     run_all(conn, geo)
@@ -87,15 +87,15 @@ def _settimana_con_selfie(conn, geo):
     return a, b, da, db, week
 
 
-def test_non_si_votano_i_propri_selfie(conn, geo):
-    a, b, da, db, week = _settimana_con_selfie(conn, geo)
+def test_non_si_votano_i_propri_selfie(conn, geo, domenica):
+    a, b, da, db, week = _settimana_con_selfie(conn, geo, domenica)
     ids = [c["id"] for c in faces.candidates(conn, week["id"], a)]
     assert da not in ids and db in ids
     assert faces.cast_vote(conn, week["id"], da, a, 5) is False
 
 
-def test_voto_e_undo(conn, geo):
-    a, b, da, db, week = _settimana_con_selfie(conn, geo)
+def test_voto_e_undo(conn, geo, domenica):
+    a, b, da, db, week = _settimana_con_selfie(conn, geo, domenica)
     assert faces.cast_vote(conn, week["id"], db, a, 4)
     assert faces.candidates(conn, week["id"], a)[0]["my_vote"] == 4
     assert faces.cast_vote(conn, week["id"], db, a, 2)          # cambio idea
@@ -104,14 +104,14 @@ def test_voto_e_undo(conn, geo):
     assert faces.candidates(conn, week["id"], a)[0]["my_vote"] is None
 
 
-def test_voto_fuori_scala_rifiutato(conn, geo):
-    a, b, da, db, week = _settimana_con_selfie(conn, geo)
+def test_voto_fuori_scala_rifiutato(conn, geo, domenica):
+    a, b, da, db, week = _settimana_con_selfie(conn, geo, domenica)
     assert faces.cast_vote(conn, week["id"], db, a, 0) is False
     assert faces.cast_vote(conn, week["id"], db, a, config.FACE_MAX_VOTE + 1) is False
 
 
-def test_vince_chi_raccoglie_piu_merda(conn, geo):
-    a, b, da, db, week = _settimana_con_selfie(conn, geo)
+def test_vince_chi_raccoglie_piu_merda(conn, geo, domenica):
+    a, b, da, db, week = _settimana_con_selfie(conn, geo, domenica)
     c = add_user(conn, "C")
     faces.cast_vote(conn, week["id"], db, a, 5)
     faces.cast_vote(conn, week["id"], db, c, 3)
@@ -121,8 +121,8 @@ def test_vince_chi_raccoglie_piu_merda(conn, geo):
     assert vincitore["deposit_id"] == db and vincitore["total"] == 8
 
 
-def test_troppi_pochi_votanti_non_eleggono_ma_chiudono(conn, geo):
-    a, b, da, db, week = _settimana_con_selfie(conn, geo)
+def test_troppi_pochi_votanti_non_eleggono_ma_chiudono(conn, geo, domenica):
+    a, b, da, db, week = _settimana_con_selfie(conn, geo, domenica)
     faces.cast_vote(conn, week["id"], db, a, 5)     # un solo votante
     assert faces.elect(conn, week["id"]) is None
     row = conn.execute("SELECT face_deposit_id, face_closed_at FROM weeks WHERE id=?",
@@ -132,8 +132,8 @@ def test_troppi_pochi_votanti_non_eleggono_ma_chiudono(conn, geo):
     assert faces.cast_vote(conn, week["id"], db, b, 5) is False   # voto chiuso
 
 
-def test_la_faccia_eletta_diventa_un_badge(conn, geo):
-    a, b, da, db, week = _settimana_con_selfie(conn, geo)
+def test_la_faccia_eletta_diventa_un_badge(conn, geo, domenica):
+    a, b, da, db, week = _settimana_con_selfie(conn, geo, domenica)
     c = add_user(conn, "C")
     faces.cast_vote(conn, week["id"], db, a, 5)
     faces.cast_vote(conn, week["id"], db, c, 4)
@@ -142,17 +142,17 @@ def test_la_faccia_eletta_diventa_un_badge(conn, geo):
     assert not _awards(conn, "faccia_di_merda", a)
 
 
-def test_una_sola_settimana_aperta_al_voto(conn, geo):
-    a, b, da, db, week = _settimana_con_selfie(conn, geo)
+def test_una_sola_settimana_aperta_al_voto(conn, geo, domenica):
+    a, b, da, db, week = _settimana_con_selfie(conn, geo, domenica)
     assert faces.open_vote_week(conn)["id"] == week["id"]
     faces.elect(conn, week["id"])
     assert faces.open_vote_week(conn) is None
 
 
-def test_selfie_con_file_sparito_e_fuori_gara(conn, geo, tmp_path):
+def test_selfie_con_file_sparito_e_fuori_gara(conn, geo, tmp_path, domenica):
     """Un `photo_ref` che punta al nulla in galleria e' un'immagine rotta; qui
     sarebbe un riquadro grigio votabile, cioe' un voto dato a niente."""
-    a, b, da, db, week = _settimana_con_selfie(conn, geo)
+    a, b, da, db, week = _settimana_con_selfie(conn, geo, domenica)
     (tmp_path / "x.jpg").write_bytes(b"finta")   # esiste solo quella di `a`
     conn.execute("UPDATE deposits SET photo_ref='sparito.jpg' WHERE id=?", (db,))
     conn.commit()
@@ -163,11 +163,11 @@ def test_selfie_con_file_sparito_e_fuori_gara(conn, geo, tmp_path):
     assert db not in con_controllo        # il filesystem si'
 
 
-def test_il_backfill_non_apre_voti_di_nascosto(conn, geo):
+def test_il_backfill_non_apre_voti_di_nascosto(conn, geo, domenica):
     """Una settimana chiusa retroattivamente nasce col voto gia' chiuso: il
     link lo manda il recap, e senza recap non c'e' niente da votare."""
     a = add_user(conn, "A")
-    now = datetime.now()
+    now = domenica
     for w in (4, 3, 2):
         dep(conn, a, 1012, _ts(now - timedelta(weeks=w)))
     run_all(conn, geo)

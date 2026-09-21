@@ -18,9 +18,9 @@ def _ts(dt):
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def test_punti_della_settimana_sono_un_delta(conn, geo):
+def test_punti_della_settimana_sono_un_delta(conn, geo, domenica):
     a = add_user(conn, "A")
-    now = datetime.now()
+    now = domenica
     dep(conn, a, 1012, _ts(now - timedelta(days=20)))   # vecchio: fuori settimana
     run_all(conn, geo)
     prima = weeks.score_snapshot(conn)[a]
@@ -47,11 +47,11 @@ def test_snapshot_di_adesso_coincide_con_la_classifica(conn, geo):
         assert round(snap.get(row["user_id"], 0.0)) == row["score"]
 
 
-def test_vince_chi_guadagna_di_piu_non_chi_caga_di_piu(conn, geo):
+def test_vince_chi_guadagna_di_piu_non_chi_caga_di_piu(conn, geo, domenica):
     """B fa una cacata sola ma prende un comune grande; A ne fa due nello
     stesso comune gia' suo e non guadagna niente."""
     a, b = add_user(conn, "A"), add_user(conn, "B")
-    now = datetime.now()
+    now = domenica
     dep(conn, a, 1012, _ts(now - timedelta(days=40)))   # A possiede gia' 1012
     run_all(conn, geo)
     weeks.close_due_weeks(conn)                          # storico chiuso, si riparte
@@ -77,9 +77,9 @@ def test_parita_rende_la_settimana_contesa():
     assert weeks._winner({}) == (None, False)   # settimana vuota, non contesa
 
 
-def test_una_settimana_chiusa_non_si_ricalcola(conn, geo):
+def test_una_settimana_chiusa_non_si_ricalcola(conn, geo, domenica):
     a, b = add_user(conn, "A"), add_user(conn, "B")
-    now = datetime.now()
+    now = domenica
     dep(conn, a, 1012, _ts(now - timedelta(hours=6)))
     run_all(conn, geo)
     closed = weeks.close_due_weeks(conn, closing_now=True)
@@ -95,20 +95,20 @@ def test_una_settimana_chiusa_non_si_ricalcola(conn, geo):
     assert row["winner_user_id"] == winner
 
 
-def test_recap_ravvicinato_non_fabbrica_una_settimana(conn, geo):
+def test_recap_ravvicinato_non_fabbrica_una_settimana(conn, geo, domenica):
     a = add_user(conn, "A")
-    now = datetime.now()
+    now = domenica
     dep(conn, a, 1012, _ts(now - timedelta(hours=3)))
     run_all(conn, geo)
     assert weeks.close_due_weeks(conn, closing_now=True)      # la prima chiude
     assert weeks.close_due_weeks(conn, closing_now=True) == []  # la seconda no
 
 
-def test_storico_si_chiude_retroattivamente_sulla_griglia(conn, geo):
+def test_storico_si_chiude_retroattivamente_sulla_griglia(conn, geo, domenica):
     """Tutte le settimane passate senza recap entrano in una volta sola, e
     la seconda chiamata non ne aggiunge altre."""
     a = add_user(conn, "A")
-    now = datetime.now()
+    now = domenica
     for w in range(6, 0, -1):
         dep(conn, a, 1012, _ts(now - timedelta(weeks=w)))
     run_all(conn, geo)
@@ -121,9 +121,9 @@ def test_storico_si_chiude_retroattivamente_sulla_griglia(conn, geo):
         assert prev["end_ts"] == nxt["start_ts"]
 
 
-def test_classifica_settimane_vinte_su_giocate(conn, geo):
+def test_classifica_settimane_vinte_su_giocate(conn, geo, domenica):
     a, b = add_user(conn, "A"), add_user(conn, "B")
-    now = datetime.now()
+    now = domenica
     dep(conn, a, 1012, _ts(now - timedelta(weeks=3)))
     dep(conn, b, 1005, _ts(now - timedelta(weeks=2)))
     dep(conn, b, 1004, _ts(now - timedelta(weeks=2)))
@@ -138,13 +138,13 @@ def test_classifica_settimane_vinte_su_giocate(conn, geo):
         assert r["ratio"] == round(r["won"] / r["played"], 3)
 
 
-def test_sotto_la_soglia_si_resta_fuori_graduatoria_ma_in_lista(conn, geo, monkeypatch):
+def test_sotto_la_soglia_si_resta_fuori_graduatoria_ma_in_lista(conn, geo, monkeypatch, domenica):
     """Un 1/1 fa rateo 1.00 e starebbe in testa per sempre: sotto la soglia si
     esce dalla graduatoria, non dalla lista."""
     monkeypatch.setattr(config, "WEEKS_MIN_PLAYED", 3)
     monkeypatch.setattr(config, "WEEKS_ACTIVE_DUMPS", 0)   # qui si prova l'altra soglia
     veterano, meteora = add_user(conn, "Veterano"), add_user(conn, "Meteora")
-    now = datetime.now()
+    now = domenica
     # il veterano gioca quattro settimane e ne vince due
     for w, comune in ((6, 1012), (5, 1005), (4, None), (3, None)):
         dep(conn, veterano, comune or 1012, _ts(now - timedelta(weeks=w)))
@@ -165,7 +165,7 @@ def test_sotto_la_soglia_si_resta_fuori_graduatoria_ma_in_lista(conn, geo, monke
     assert all(r["ranked"] for r in lb[:nomi.index("Meteora")])
 
 
-def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch, tmp_path):
+def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch, tmp_path, domenica):
     """Il giro completo del recap: chiude la settimana, elegge la faccia di
     merda di quella prima, e apre il voto su quella appena chiusa."""
     from conquisterco import faces
@@ -175,7 +175,7 @@ def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch, 
     monkeypatch.setattr(bot, "ALLOWED_CHAT", "1")
     monkeypatch.setattr(bot, "PUBLIC_URL", "https://conquisterco.example")
     a, b, c = add_user(conn, "A"), add_user(conn, "B"), add_user(conn, "C")
-    now = datetime.now()
+    now = domenica
     dep(conn, a, 1012, _ts(now - timedelta(hours=8)))
     dep(conn, b, 1005, _ts(now - timedelta(hours=7)))
     run_all(conn, geo)
@@ -211,7 +211,7 @@ def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch, 
     ).fetchone()["face_deposit_id"] == dbid
 
 
-def test_avvio_dell_app_chiude_lo_storico(conn, geo, tmp_path, monkeypatch):
+def test_avvio_dell_app_chiude_lo_storico(conn, geo, tmp_path, monkeypatch, domenica):
     """Dopo un aggiornamento la tabella `weeks` e' vuota, e la classifica
     sembrerebbe rotta fino al recap della domenica. L'avvio dell'app chiude
     quello che e' gia' finito: lo storico e' derivabile subito."""
@@ -227,7 +227,7 @@ def test_avvio_dell_app_chiude_lo_storico(conn, geo, tmp_path, monkeypatch):
     c = connect(str(db))
     init_db(c)
     a = add_user(c, "A")
-    now = datetime.now()
+    now = domenica
     for w in (4, 3, 2):
         dep(c, a, 1012, _ts(now - timedelta(weeks=w)))
     run_all(c, geo)
@@ -244,14 +244,14 @@ def test_avvio_dell_app_chiude_lo_storico(conn, geo, tmp_path, monkeypatch):
     c.close()
 
 
-def test_serve_anche_essere_attivi_adesso(conn, geo, monkeypatch):
+def test_serve_anche_essere_attivi_adesso(conn, geo, monkeypatch, domenica):
     """Seconda condizione: la storia non basta, bisogna esserci ora. Il veterano
     ha le settimane ma ha smesso di cagare; il nuovo caga tanto ma e' arrivato
     ieri. Fuori tutti e due, per ragioni opposte."""
     monkeypatch.setattr(config, "WEEKS_MIN_PLAYED", 3)
     monkeypatch.setattr(config, "WEEKS_ACTIVE_WINDOW", 8)
     monkeypatch.setattr(config, "WEEKS_ACTIVE_DUMPS", 4)
-    now = datetime.now()
+    now = domenica
 
     reduce = add_user(conn, "Reduce")          # storia lunga, fermo da mesi
     for w in (30, 29, 28, 27):
@@ -280,14 +280,14 @@ def test_serve_anche_essere_attivi_adesso(conn, geo, monkeypatch):
     assert dopo["Assiduo"]["ranked"] is False         # nel frattempo ha smesso anche lui
 
 
-def test_il_pannello_settimane_porta_facce_e_soglie(conn, geo):
+def test_il_pannello_settimane_porta_facce_e_soglie(conn, geo, domenica):
     """Le due classifiche attaccano le bandierine con la stessa funzione: se
     una delle due smette di mostrarle, questo test cade."""
     from conquisterco.app import data
     a = add_user(conn, "A")
     conn.execute("UPDATE users SET flag_ref='profiles/1/flag.png', color='#123456' WHERE id=?", (a,))
     conn.commit()
-    now = datetime.now()
+    now = domenica
     for w in (3, 2, 1):
         dep(conn, a, 1012, _ts(now - timedelta(weeks=w)))
     run_all(conn, geo)

@@ -1,4 +1,6 @@
 import sqlite3
+from datetime import datetime
+from types import SimpleNamespace
 
 import pytest
 
@@ -35,3 +37,23 @@ def dep(conn, uid, osm_id, ts, *, photo=True):
 
 def mkuser(conn, name, **kw):
     return add_user(conn, name, **kw)
+
+
+@pytest.fixture
+def domenica(monkeypatch):
+    """Ferma l'orologio di `weeks` a una domenica sera, come il recap vero, e
+    ritorna quell'istante.
+
+    Serve perche' senza, i test che chiudono una settimana **dipendono dal
+    giorno in cui si lanciano**: `MIN_WEEK_DAYS` impedisce di chiudere una
+    settimana appena cominciata, quindi da lunedi' a mercoledi'
+    `close_due_weeks(closing_now=True)` ritorna una lista vuota e tredici test
+    cadono in fila. Scoperto il 21 settembre 2026, un lunedi' mattina, su test
+    scritti il venerdi' e verdi per tre giorni.
+
+    Chi usa questa fixture deve datare i propri depositi rispetto all'istante
+    che ritorna, non a `datetime.now()`."""
+    quando = datetime(2026, 9, 20, 20, 0, 0)     # domenica, ora del cron
+    from conquisterco import weeks
+    monkeypatch.setattr(weeks, "datetime", SimpleNamespace(now=lambda: quando))
+    return quando

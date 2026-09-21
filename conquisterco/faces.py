@@ -122,7 +122,15 @@ def clear_vote(conn: sqlite3.Connection, week_id: int, deposit_id: int, voter_id
 
 
 def tally(conn: sqlite3.Connection, week_id: int) -> list[dict]:
-    """Spoglio: per selfie, merda totale e quanti l'hanno votato. Ordinato."""
+    """Spoglio: per selfie, merda totale e quanti l'hanno votato. Ordinato.
+
+    **Esclude chi non e' piu' in gara.** Filtrare i candidati e rifiutare i
+    voti nuovi non basta: chi passa a «ristretto» a meta' settimana si porta
+    dietro i voti gia' presi, e senza questo filtro potrebbe vincere — con
+    proclamazione a nome suo su un selfie che nessuno puo' piu' vedere. I voti
+    restano in tabella e tornerebbero a contare se tornasse pubblico: erano
+    stati dati onestamente su un selfie allora visibile."""
+    in_gara = visibilita.in_gara_al_voto(conn)
     return [dict(r) for r in conn.execute(
         """SELECT v.deposit_id, SUM(v.score) AS total, COUNT(*) AS voters,
                   d.user_id, COALESCE(u.public_name, u.display_name) AS author
@@ -131,7 +139,8 @@ def tally(conn: sqlite3.Connection, week_id: int) -> list[dict]:
            JOIN users u ON u.id = d.user_id
            WHERE v.week_id = ?
            GROUP BY v.deposit_id
-           ORDER BY total DESC, voters DESC""", (week_id,))]
+           ORDER BY total DESC, voters DESC""", (week_id,))
+        if r["user_id"] in in_gara]
 
 
 def elect(conn: sqlite3.Connection, week_id: int, *, now: str | None = None) -> dict | None:
