@@ -424,6 +424,12 @@ o quando il bot non c'è.
 - Il pubblico ha **solo lettura** di mappa + classifiche coi display name scelti dagli
   utenti. Pin, foto e profili restano dietro login.
 - Nessuna self-registration prevista: gli utenti li crea l'admin.
+- **Pagina di login** su `/login`. Una pagina chiesta senza sessione non risponde con
+  un errore: rimanda li' con `next`, e dopo la password si torna dove si stava andando.
+  Vale per le pagine e non per `/api/`, dove un 401 deve restare un 401 in JSON, e
+  `next` viene accettato solo se e' un path interno (altrimenti e' un redirect aperto).
+  Serve perche' il link del voto arriva su Telegram e si apre dal telefono, dove la
+  sessione spesso non c'e'.
 
 ---
 

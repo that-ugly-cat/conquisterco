@@ -11,6 +11,8 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Upload
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.exception_handlers import http_exception_handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from .. import config, faces, visibilita, weeks
@@ -35,6 +37,7 @@ if not _default_db.exists():
 DB_PATH = os.environ.get("CONQUISTERCO_DB", str(_default_db))
 MEDIA_DIR = Path(os.environ.get("CONQUISTERCO_MEDIA", str(_ROOT / "media"))).resolve()
 DEMO_SEED = os.environ.get("CONQUISTERCO_DEMO", "1") == "1"
+BS = chr(92)   # per non scrivere un backslash nudo nei confronti
 
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
@@ -188,6 +191,7 @@ def require_login(request: Request) -> None:
 
 
 def require_admin(request: Request) -> None:
+    require_login(request)   # senza sessione manca il login, non il permesso
     if not is_admin(request):
         raise HTTPException(status_code=403, detail="serve un admin")
 
@@ -209,16 +213,61 @@ def index(request: Request):
         me=request.session.get("name")))
 
 
+def _dove_tornare(grezzo: str | None) -> str:
+    """Il `next` del login, ripulito: solo path interni di questo sito.
+
+    Un `next` che punta altrove sarebbe un redirect aperto, e il posto dove si
+    finisce subito dopo aver scritto la password è esattamente quello che non
+    deve poter scegliere un link arrivato da fuori."""
+    if not grezzo or not grezzo.startswith("/"):
+        return ""
+    if grezzo.startswith("//") or grezzo.startswith("/" + BS):
+        return ""
+    return grezzo
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request, next: str = "", errore: int = 0):
+    dove = _dove_tornare(next)
+    if is_logged(request):
+        return RedirectResponse(dove or "/", status_code=303)
+    return templates.TemplateResponse(request, "login.html", _ctx(
+        request, dove=dove, errore=bool(errore)))
+
+
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...),
-          conn=Depends(get_db)):
+          next: str = Form(""), conn=Depends(get_db)):
+    dove = _dove_tornare(next)
     row = conn.execute(
         "SELECT id, role, password_hash, display_name FROM users WHERE display_name=?",
         (username.strip(),),
     ).fetchone()
     if row and verify_password(password, row["password_hash"]):
         request.session.update(uid=row["id"], role=row["role"], name=row["display_name"])
-    return RedirectResponse("/", status_code=303)
+        return RedirectResponse(dove or "/", status_code=303)
+    # password sbagliata: si torna alla pagina di login, che lo dice
+    q = urllib.parse.urlencode({"next": dove, "errore": 1})
+    return RedirectResponse("/login?" + q, status_code=303)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _pagina_senza_login(request: Request, exc: StarletteHTTPException):
+    """Una pagina chiesta senza sessione non è un errore da mostrare: è un
+    login mancante. Il link del voto arriva su Telegram e si apre dal telefono,
+    dove la sessione spesso non c'è — un 401 nudo lì vuol dire non votare.
+
+    Vale solo per le pagine: le chiamate sotto /api/ continuano a rispondere
+    401 in JSON, perché un fetch che riceve una redirect a HTML non se ne
+    accorge e si ritrova a fare il parse di una pagina."""
+    pagina = (exc.status_code == 401 and request.method == "GET"
+              and "text/html" in (request.headers.get("accept") or "")
+              and not request.url.path.startswith("/api/"))
+    if pagina:
+        intero = request.url.path + (("?" + request.url.query) if request.url.query else "")
+        q = urllib.parse.urlencode({"next": intero})
+        return RedirectResponse("/login?" + q, status_code=303)
+    return await http_exception_handler(request, exc)
 
 
 @app.post("/logout")

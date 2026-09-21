@@ -36,6 +36,9 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .admin-bc button{padding:.4rem .7rem;border:0;border-radius:5px;background:var(--accent);color:#fff;cursor:pointer}
 .bc-ok{color:#2e7d32;font-weight:600}
 .bc-err{color:#c0392b;font-weight:600}
+.card form.login-page{display:block}
+.card form.login-page input,.card form.login-page button{display:block;width:100%;margin-bottom:.5rem}
+.card form.login-page button{margin-bottom:0;padding:.5rem}
 
 .prof-wrap{max-width:900px;margin:1.2rem auto;padding:0 1rem}
 .prof-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}

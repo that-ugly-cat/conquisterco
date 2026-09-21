@@ -12,7 +12,7 @@ dependencies = []
 #   bot        → python-telegram-bot
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "httpx2>=0.28"]   # httpx2: il TestClient di starlette 1.x lo vuole cosi
 web = [
     "fastapi==0.139.0",
     "starlette==1.3.1",

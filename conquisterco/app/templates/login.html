@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conquisterco — {{ T.login_title }}</title>
+  <link rel="stylesheet" href="/static/style.css?v={{ static_v }}">
+</head>
+<body>
+  <header>
+    <div class="brand">💩 <b>Conquisterco</b> <span class="tag">{{ T.login_title }}</span></div>
+    <div class="auth">
+      <span class="lang-sel">
+        <a href="/lang/it" class="{{ 'lang-on' if lang == 'it' else '' }}">IT</a>
+        <a href="/lang/en" class="{{ 'lang-on' if lang == 'en' else '' }}">EN</a>
+      </span>
+      <a href="/privacy" class="mini-link" title="{{ T.privacy }}">🔒 {{ T.privacy }}</a>
+      <a href="/"><button>{{ T.btn_map }}</button></a>
+    </div>
+  </header>
+
+  <div class="prof-wrap">
+    <div class="card" style="max-width:420px;margin:0 auto">
+      <h1 style="margin-top:0">💩 {{ T.login_title }}</h1>
+      <p class="muted">{{ T.login_why if dove else T.login_intro }}</p>
+      {% if errore %}<p class="bc-err">{{ T.login_bad }}</p>{% endif %}
+
+      <form method="post" action="/login" class="login-page">
+        <input type="hidden" name="next" value="{{ dove }}">
+        <input name="username" placeholder="{{ T.login_name }}" autocomplete="username"
+               autofocus required>
+        <input type="password" name="password" placeholder="{{ T.login_pw }}"
+               autocomplete="current-password" required>
+        <button>{{ T.login_btn }}</button>
+      </form>
+
+      <hr>
+      <p class="muted">{{ T.login_lost }}</p>
+    </div>
+  </div>
+</body>
+</html>

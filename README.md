@@ -73,7 +73,8 @@ uv run --extra dev pytest                # test
 ```
 
 La dashboard, al primo avvio senza dati, semina un mondo demo. L'auth è **per
-utente** (niente password condivisa): crea un admin con
+utente** (niente password condivisa; chi apre una pagina senza sessione finisce
+sulla pagina di login e poi torna dove stava andando): crea un admin con
 `uv run conquisterco-admin <nome> --password <pw> --role admin`.
 
 CLI: `conquisterco-serve` (web) · `conquisterco-demo` · `conquisterco-import <dir>`
