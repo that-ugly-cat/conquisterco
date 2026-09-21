@@ -80,11 +80,11 @@ Tre regole operative:
 > le 6 del mattino, nei due mesi e mezzo del bot ce n'erano **172**. Le due curve hanno la
 > stessa forma, traslata. Danno collaterale: **133 "Alba del Nuovo Regno" su 135** erano
 > andate a gente che cagava alle 7 passate, e il recap della domenica partiva alle 22:00
-> per il gruppo perché il cron leggeva le 20:00 di Greenwich. Il cron adesso prova a
-> entrambe le ore UTC possibili (18 d'estate, 19 d'inverno) con una guardia
-> `[ "$(TZ=Europe/Rome date +%H)" = "20" ]`, e non con `CRON_TZ`: quello è di cronie e
-> **questo cron non lo onora**, provato con una sonda che non scattava mentre il
-> controllo senza CRON_TZ scattava. L'alternativa era cambiare il fuso della macchina,
+> per il gruppo perché il cron leggeva le 20:00 di Greenwich. Il cron adesso tenta a
+> entrambe le ore UTC in cui a Roma può essere l'ora giusta, con una guardia che lascia
+> passare solo quella, e **non** con `CRON_TZ`: quello è di cronie, e questo cron
+> (Debian vixie) **non lo onora**. Provato con una sonda che non scattava mentre il
+> controllo senza `CRON_TZ` scattava. L'alternativa era cambiare il fuso della macchina,
 > che avrebbe spostato anche i quattro job di borant-backup nello stesso crontab.
 
 ---
@@ -334,9 +334,9 @@ ricalcola più: quello che il bot ha annunciato al gruppo **resta** il verdetto,
 lo storico viene ri-arricchito dopo. È lo stesso patto di `manual_awards` — dato grezzo,
 non derivato, immune al `finalize`.
 
-Le settimane tessellano senza buchi: ognuna comincia dove è finita la precedente, così
-la cacata delle 21 di domenica (dopo il recap delle 20) cade nella settimana nuova e non
-in un limbo. Quelle passate **senza** recap — tutto lo storico WhatsApp, e le domeniche
+Le settimane tessellano senza buchi: ognuna comincia dove è finita la precedente, così la
+cacata di mezzanotte di domenica (dopo il recap delle **21:30**) cade nella settimana nuova
+e non in un limbo. Quelle passate **senza** recap — tutto lo storico WhatsApp, e le domeniche
 in cui il cron non è partito — si chiudono retroattivamente sulla griglia dei lunedì,
 una volta sola. Due recap ravvicinati non fabbricano una settimana di due ore:
 sotto `MIN_WEEK_DAYS` non si chiude niente.

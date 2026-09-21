@@ -1,4 +1,4 @@
-"""CLI del recap settimanale — da schedulare via cron (Domenica 20:00).
+"""CLI del recap settimanale — da schedulare via cron (domenica 21:30, ora di Roma).
 
     conquisterco-recap
 

@@ -81,15 +81,21 @@ profilo con **Collega Telegram** (deep-link).
 
 ## Recap settimanale (cron)
 
-Il bot manda un riepilogo ogni **domenica alle 20:00 di Roma** tramite cron dell'host.
+Il bot manda un riepilogo ogni **domenica alle 21:30 di Roma** tramite cron dell'host.
 L'host sta in **UTC** e ci resta (nello stesso crontab ci sono i job di borant-backup,
 con ore scelte in sequenza: cambiare il fuso della macchina sposterebbe anche quelli).
-Quindi la riga prova a entrambe le ore UTC in cui a Roma possono essere le 20 e si
-difende da sola. `crontab -e`:
+Quindi la riga prova a entrambe le ore UTC in cui a Roma possono essere le 21 — 19:30
+d'estate, 20:30 d'inverno — e si difende da sola. `crontab -e`:
 
 ```
-0 18,19 * * 0  [ "$(TZ=Europe/Rome date +\%H)" = "20" ] && cd /opt/apps/conquisterco && docker compose exec -T conquisterco uv run --no-sync conquisterco-recap
+30 19,20 * * 0  [ "$(TZ=Europe/Rome date +\%H)" = "21" ] && cd /opt/apps/conquisterco && docker compose exec -T conquisterco uv run --no-sync conquisterco-recap
 ```
+
+Per cambiare l'ora si toccano **tre** cose insieme, o la riga mente: il minuto, le due
+ore UTC candidate e l'ora nella guardia. Conviene verificarlo simulando le domeniche
+fino oltre il cambio d'ora e contando gli scatti: devono essere **uno per domenica**,
+sempre all'ora voluta. Fatto il 21 set 2026 su 25 domeniche, cambio del 25 ottobre
+compreso.
 
 Due trappole, entrambe pagate il 21 set 2026:
 
