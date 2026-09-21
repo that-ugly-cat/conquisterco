@@ -25,7 +25,8 @@ def test_my_stats():
     assert s["comuni_visitati"] == 2
     assert s["rank"] in (1, 2)
     assert isinstance(s["badges"], list)
-    assert len(s["activity"]) == 12          # istogramma 12 mesi
+    assert len(s["cal"]["cols"]) == 53       # calendario: 53 settimane
+    assert all(len(c) == 7 for c in s["cal"]["cols"])
     assert s["weight_kg"] == round(2 * 128 / 1000.0, 1)  # 2 depositi × ~128 g
 
 
@@ -80,3 +81,42 @@ def test_delete_user_cancella_tutto(tmp_path):
     # B possiede ancora Palermo
     assert conn.execute("SELECT COUNT(*) FROM territory_ownership WHERE owner_user_id=?",
                         (b,)).fetchone()[0] == 1
+
+
+def test_calendario_attivita():
+    """La griglia stile GitHub: quadratini giusti nei giorni giusti.
+
+    La data di oggi si passa da fuori, altrimenti il test dice cose diverse a
+    seconda del giorno in cui gira — difetto gia' pagato con le settimane.
+    """
+    from datetime import date
+
+    conn = fresh_db(":memory:")
+    a = mkuser(conn, "A")
+    dep(conn, a, 1012, "2026-09-16 08:00:00")   # mercoledi'
+    dep(conn, a, 1003, "2026-09-16 19:00:00")   # stesso giorno: due
+    dep(conn, a, 1019, "2026-09-20 09:00:00")   # domenica
+    run_all(conn, FakeGeocoder())
+
+    cal = data.activity_calendar(conn, a, today=date(2026, 9, 24))  # un giovedi'
+    celle = {c["d"]: c for col in cal["cols"] for c in col if c}
+
+    assert celle["2026-09-16"]["n"] == 2 and celle["2026-09-16"]["lvl"] == 2
+    assert celle["2026-09-20"]["n"] == 1 and celle["2026-09-20"]["lvl"] == 1
+    assert celle["2026-09-17"]["n"] == 0 and celle["2026-09-17"]["lvl"] == 0
+    assert cal["totale"] == 3 and cal["giorni"] == 2
+
+    # l'ultima colonna e' la settimana in corso, e il futuro resta vuoto
+    ultima = cal["cols"][-1]
+    assert ultima[0]["d"] == "2026-09-21"       # lunedi' in alto
+    assert ultima[3]["d"] == "2026-09-24"       # oggi
+    assert ultima[4] is None and ultima[6] is None
+
+    # il primo giorno e' il lunedi' di 53 settimane prima: un anno pieno
+    assert cal["dal"] == "2025-09-22" and cal["al"] == "2026-09-24"
+
+
+def test_le_soglie_del_calendario_sono_fisse():
+    """Quattro livelli, non relativi al massimo del giocatore: due calendari
+    affiancati devono dire la stessa cosa."""
+    assert [data._livello_cal(n) for n in (0, 1, 2, 3, 4, 12)] == [0, 1, 2, 3, 4, 4]

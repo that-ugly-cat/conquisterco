@@ -26,22 +26,44 @@
     <h1><span class="swatch" style="background:{{ s.color or '#6F4E37' }}"></span>{{ s.name }}
       <span class="muted" style="font-size:1rem;font-weight:400">@{{ s.username }}</span></h1>
 
-    <div class="prof-grid">
-      <!-- Istogramma -->
-      <section class="card wide">
-        <h2>{{ T.prof_hist }}</h2>
-        {% set maxc = (s.activity | map(attribute='count') | max) or 1 %}
-        <div class="histo">
-          {% for a in s.activity %}
-          <div class="histo-col" title="{{ a.ym }}: {{ a.count }}">
-            <div class="histo-val">{{ a.count or '' }}</div>
-            <div class="histo-bar" style="height:{{ (a.count / maxc * 100) | round }}%"></div>
-            <div class="histo-lab">{{ "%02d"|format(a.month) }}</div>
+    <!-- Calendario dell'attivita' (stile GitHub) -->
+    <section class="card cal-card">
+      <h2>{{ T.prof_hist }}
+        <span class="muted cal-tot">{{ T.cal_totale.replace('{n}', s.cal.totale | string).replace('{g}', s.cal.giorni | string) }}</span>
+      </h2>
+      <div class="table-scroll">
+        <div class="cal">
+          <div class="cal-gg">
+            <span style="grid-row:1">{{ T.gg_brevi[0] }}</span>
+            <span style="grid-row:3">{{ T.gg_brevi[2] }}</span>
+            <span style="grid-row:5">{{ T.gg_brevi[4] }}</span>
+            <span style="grid-row:7">{{ T.gg_brevi[6] }}</span>
           </div>
-          {% endfor %}
+          <div class="cal-corpo">
+            <div class="cal-mesi" style="grid-template-columns:repeat({{ s.cal.settimane }},var(--cal-passo))">
+              {% for m in s.cal.mesi %}<span style="grid-column:{{ m.col + 1 }}">{{ T.mesi_brevi[m.m - 1] }}</span>{% endfor %}
+            </div>
+            <div class="cal-griglia">
+              {% for col in s.cal.cols %}{% for c in col %}{% if c %}<i class="lv{{ c.lvl }}" title="{{ c.d }} · {{ c.n }}"></i>{% else %}<i class="cal-futuro"></i>{% endif %}{% endfor %}{% endfor %}
+            </div>
+          </div>
         </div>
-      </section>
+      </div>
+      <script>
+        // su schermo stretto il calendario scorre: si parte dal fondo, dove
+        // stanno le settimane che interessano. Su desktop non c'e' scorrimento
+        // e questa riga non fa niente.
+        (function (c) { if (c) c.scrollLeft = c.scrollWidth; })(document.currentScript.previousElementSibling);
+      </script>
+      <div class="cal-legenda">
+        <span>{{ s.cal.dal }} → {{ s.cal.al }}</span>
+        <span class="cal-scala">{{ T.cal_meno }}
+          <i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i>
+          {{ T.cal_piu }}</span>
+      </div>
+    </section>
 
+    <div class="prof-grid">
       <!-- Statistiche -->
       <section class="card">
         <h2>{{ T.prof_stats }}</h2>
@@ -60,7 +82,7 @@
         <p class="muted">{{ T.st_from }} {{ (s.primo or '')[:10] }} {{ T.st_to }} {{ (s.ultimo or '')[:10] }}</p>
         {% if s.records %}<p><b>{{ T.st_records_held }}</b> {% for k in s.records %}{{ T['rec_' + k] }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
         <h3>{{ T.tab_badges }} ({{ s.badges | length }}) <button class="link-btn" onclick="document.getElementById('legend').classList.remove('hidden')">{{ T.badges_what }}</button></h3>
-        <p>{% for b in s.badges %}<span class="player-link" onclick="showBadgeInfo('{{ b.code }}')">{{ b.icon or '🏅' }} {{ b.name }}{% if b.count > 1 %} ×{{ b.count }}{% endif %}</span><br>{% else %}<i>{{ T.pm_no_badge }}</i>{% endfor %}</p>
+        <div class="badge-lista">{% for b in s.badges %}<span class="player-link" onclick="showBadgeInfo('{{ b.code }}')">{{ b.icon or '🏅' }} {{ b.name }}{% if b.count > 1 %} ×{{ b.count }}{% endif %}</span>{% else %}<i>{{ T.pm_no_badge }}</i>{% endfor %}</div>
       </section>
 
       <!-- Identità -->

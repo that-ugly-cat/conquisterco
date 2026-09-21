@@ -51,10 +51,13 @@ in alto, trasferta più lontana…), oltre 50 achievement, e una mappa coropleti
 - **Visibilità dei selfie** a tre livelli: pubblici, **ristretti** (io, gli admin e una
   lista che scelgo — e in cambio si esce dal voto della faccia di merda), oppure non
   salvati affatto. Il controllo sta in un posto solo, perché un selfie esce da cinque.
-- **Profilo**: rank e punteggio, bacheca badge cliccabili, nome pubblico (≠ username),
+- **Profilo**: **calendario dell'attività** in stile GitHub (un anno di giorni, una
+  colonna per settimana, quattro tonalità a soglie fisse così due calendari si
+  confrontano), rank e punteggio, bacheca badge cliccabili, nome pubblico (≠ username),
   bandiera, handle Telegram, "non salvare i selfie", cancella-solo-selfie e cancella-tutto.
 - **Admin**: crea utenti, reset password, ruoli, **merge** account, **messaggi liberi
   al gruppo** via bot, e **assegnazione/revoca di badge speciali** ("li dà il Sistema").
+  Ogni azione lascia una **ricevuta**: un toast col nome di chi è stato toccato.
 - **i18n IT/EN** con selettore in topbar; pagina **privacy**; layout responsive.
 - **Bot Telegram**: ogni pin è un dump (foto/video opzionale, anche prima del pin),
   account provvisori reclamabili via deep-link, annunci sassy distinti (conquista/furto/

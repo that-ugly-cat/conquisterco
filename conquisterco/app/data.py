@@ -406,7 +406,7 @@ def my_stats(conn: sqlite3.Connection, uid: int, t: dict | None = None) -> dict 
         "streak": _streaks(conn).get(uid, 0),
         "primo": c["first"], "ultimo": c["last"],
         "badges": prof["badges"], "records": held,
-        "activity": monthly_activity(conn, uid),
+        "cal": activity_calendar(conn, uid),
         "weight_kg": round(c["tot"] * AVG_DUMP_G / 1000.0, 1),
         "no_selfie": bool(u["no_selfie"]),   # storico, non piu' letto dal bot
         "visibilita": u["selfie_visibility"] or visibilita.PUBBLICO,
@@ -445,22 +445,53 @@ def delete_user_selfies(conn: sqlite3.Connection, uid: int, media_dir) -> int:
     return len(refs)
 
 
-def monthly_activity(conn: sqlite3.Connection, uid: int, months: int = 12) -> list[dict]:
-    """Depositi per mese negli ultimi `months` mesi (istogramma). Mesi vuoti = 0."""
-    today = date.today()
-    seq = []
-    y, m = today.year, today.month
-    for i in range(months - 1, -1, -1):
-        mm, yy = m - i, y
-        while mm <= 0:
-            mm += 12
-            yy -= 1
-        seq.append((yy, mm))
-    counts = {r["ym"]: r["n"] for r in conn.execute(
-        "SELECT strftime('%Y-%m', ts) ym, COUNT(*) n FROM deposits WHERE user_id=? GROUP BY ym",
-        (uid,))}
-    return [{"ym": f"{yy:04d}-{mm:02d}", "month": mm, "year": yy,
-             "count": counts.get(f"{yy:04d}-{mm:02d}", 0)} for yy, mm in seq]
+CAL_SOGLIE = (1, 2, 3, 4)   # 1 cacata = livello 1, 4 o piu' = livello 4
+
+
+def _livello_cal(n: int) -> int:
+    """Quanto scuro sta il quadratino. Le soglie sono **fisse** e non relative
+    al massimo del singolo giocatore: cosi' due calendari messi uno sotto
+    l'altro dicono la stessa cosa, che e' meta' del perche' questo grafico
+    esiste. Con le giornate tipiche (una, due, tre) la scala e' gia' piena."""
+    for i, soglia in enumerate(CAL_SOGLIE):
+        if n < soglia:
+            return i
+    return len(CAL_SOGLIE)
+
+
+def activity_calendar(conn: sqlite3.Connection, uid: int, *, weeks: int = 53,
+                      today: date | None = None) -> dict:
+    """Il calendario stile GitHub: una colonna per settimana, lunedi' in alto.
+
+    L'istogramma mensile diceva dodici numeri; questo ne dice trecentosettanta
+    e in piu' fa vedere la forma — i buchi, le raffiche, le domeniche.
+
+    I giorni futuri dell'ultima settimana esistono come celle ma valgono
+    `None`: senza, il calendario finirebbe a meta' colonna."""
+    oggi = today or date.today()
+    inizio = oggi - timedelta(days=oggi.weekday()) - timedelta(weeks=weeks - 1)
+    conteggi = {r["d"]: r["n"] for r in conn.execute(
+        """SELECT date(ts) d, COUNT(*) n FROM deposits
+           WHERE user_id=? AND date(ts) >= ? GROUP BY d""",
+        (uid, inizio.isoformat()))}
+    colonne, mesi = [], []
+    for w in range(weeks):
+        col = []
+        for g in range(7):
+            giorno = inizio + timedelta(weeks=w, days=g)
+            if giorno > oggi:
+                col.append(None)
+                continue
+            n = conteggi.get(giorno.isoformat(), 0)
+            col.append({"d": giorno.isoformat(), "n": n, "lvl": _livello_cal(n)})
+        colonne.append(col)
+        primo = inizio + timedelta(weeks=w)
+        if primo.day <= 7:            # la colonna che apre il mese lo etichetta
+            mesi.append({"col": w, "m": primo.month})
+    return {"cols": colonne, "mesi": mesi, "settimane": weeks,
+            "totale": sum(n for d, n in conteggi.items() if d <= oggi.isoformat()),
+            "giorni": sum(1 for d, n in conteggi.items() if n and d <= oggi.isoformat()),
+            "dal": inizio.isoformat(), "al": oggi.isoformat()}
 
 
 def delete_user(conn: sqlite3.Connection, uid: int, media_dir) -> None:

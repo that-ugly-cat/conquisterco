@@ -114,7 +114,13 @@
     {% else %}<p class="muted">{{ T.adm_badge_nomanual }}</p>{% endif %}
   </div>
 
-  {% if pw_di %}<div class="toast" id="toast">✓ {{ T.adm_pw_done }} {{ pw_di }}</div>{% endif %}
+  {% set ricevute = {
+      'pw': T.adm_pw_done, 'creato': T.adm_t_creato, 'aggiornato': T.adm_t_aggiornato,
+      'ruolo': T.adm_t_ruolo, 'merge': T.adm_t_merge,
+      'badge': T.adm_t_badge, 'badge_tolto': T.adm_t_badge_tolto } %}
+  {% if fatto in ricevute %}
+  <div class="toast" id="toast">✓ {{ ricevute[fatto] }} {{ chi }}{% if extra %} → {{ extra }}{% endif %}</div>
+  {% endif %}
   <script>
     // Comparsa e sparizione stanno nel CSS. Qui si toglie solo il parametro
     // dall'indirizzo: senza, un refresh riannuncia una password cambiata
