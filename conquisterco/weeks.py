@@ -27,7 +27,7 @@ from datetime import datetime, timedelta
 
 from . import config
 from .leaderboards import _score, badge_points
-from .util import fmt_ts, parse_ts
+from .util import fmt_ts, now_local, parse_ts
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ def close_due_weeks(conn: sqlite3.Connection, *, closing_now: bool = False,
       chiude: due `conquisterco-recap` nello stesso giorno non devono
       fabbricare una settimana di due ore.
     """
-    now = now or datetime.now()
+    now = now or now_local()
     now_s = fmt_ts(now)
     start = _last_end(conn)
     if start is None:
@@ -174,7 +174,7 @@ def current_week_start(conn: sqlite3.Connection) -> str:
     primo deposito della storia: quello è il punto da cui parte il backfill
     (`close_due_weeks`), e confonderli farebbe della settimana in corso tutto
     lo storico del gioco."""
-    return _last_end(conn) or fmt_ts(_monday(datetime.now()))
+    return _last_end(conn) or fmt_ts(_monday(now_local()))
 
 
 def running_gains(conn: sqlite3.Connection) -> dict[int, float]:
@@ -207,7 +207,7 @@ def weeks_leaderboard(conn: sqlite3.Connection, now: datetime | None = None) -> 
     i numeri veri, ordinati per quanto manca a rientrarci. Ordinata per rateo,
     poi vinte, poi giocate; `played` e `recent` vanno mostrate sempre accanto
     al rateo, perché le soglie riducono il rumore ma non lo azzerano."""
-    now = now or datetime.now()
+    now = now or now_local()
     da = fmt_ts(now - timedelta(weeks=config.WEEKS_ACTIVE_WINDOW))
     recenti = {r["u"]: r["n"] for r in conn.execute(
         "SELECT user_id AS u, COUNT(*) AS n FROM deposits WHERE ts >= ? GROUP BY user_id", (da,))}

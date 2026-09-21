@@ -81,12 +81,25 @@ profilo con **Collega Telegram** (deep-link).
 
 ## Recap settimanale (cron)
 
-Il bot manda un riepilogo ogni **domenica alle 20:00** tramite cron dell'host
-(fuso orario dell'host = Europe/Rome, o imposta `TZ`). `crontab -e`:
+Il bot manda un riepilogo ogni **domenica alle 20:00 di Roma** tramite cron dell'host.
+L'host sta in **UTC** e ci resta (nello stesso crontab ci sono i job di borant-backup,
+con ore scelte in sequenza: cambiare il fuso della macchina sposterebbe anche quelli).
+Quindi la riga prova a entrambe le ore UTC in cui a Roma possono essere le 20 e si
+difende da sola. `crontab -e`:
 
 ```
-0 20 * * 0  cd /opt/app/conquisterco && docker compose exec -T conquisterco uv run --no-sync conquisterco-recap
+0 18,19 * * 0  [ "$(TZ=Europe/Rome date +\%H)" = "20" ] && cd /opt/apps/conquisterco && docker compose exec -T conquisterco uv run --no-sync conquisterco-recap
 ```
+
+Due trappole, entrambe pagate il 21 set 2026:
+
+- **`CRON_TZ=Europe/Rome` non funziona qui.** È una funzione di cronie; questo è il cron
+  di Debian/Ubuntu (vixie 3.0pl1) e la ignora. Verificato con una sonda: la riga sotto
+  `CRON_TZ` non scattava, la stessa riga senza CRON_TZ all'ora UTC sì.
+- **Il `%` va scappato con la barra rovesciata.** In un crontab significa a-capo: senza
+  la barra il comando viene troncato prima del confronto e **la guardia passa sempre**,
+  cioè fallisce nel modo che non si vede. Provato in tutte e due le direzioni, con un
+  job che deve scattare e uno che non deve.
 
 **Il recap non è solo un messaggio: è l'evento che chiude la settimana.** Nell'ordine
 proclama la faccia di merda votata (quella della settimana prima, il cui voto si chiude

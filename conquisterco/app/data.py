@@ -5,14 +5,14 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections import Counter, defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 # peso medio stimato di un deposito (g). Fonte: peso medio delle feci ~128 g.
 AVG_DUMP_G = 128
 
 from ..leaderboards import _streaks, main_leaderboard, records
 from ..recompute import owner_of
-from ..util import is_video
+from ..util import is_video, now_local, ts_now
 from .. import config, visibilita, weeks
 
 _RECORD_LABELS = {
@@ -279,7 +279,7 @@ def weekly_recap(conn: sqlite3.Connection, week: dict | None = None) -> dict:
 
     `slackers`: chi è attivo di recente (≥1 deposito negli ultimi 30 giorni) ma
     in questa settimana ha fatto zero."""
-    now = datetime.now()
+    now = now_local()
     start = week["start_ts"] if week else weeks.current_week_start(conn)
     end = week["end_ts"] if week else None
     active_since = (now - timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
@@ -627,7 +627,7 @@ def grant_manual_badge(conn: sqlite3.Connection, uid: int, code: str, context: s
     row = conn.execute("SELECT 1 FROM achievements WHERE code=? AND manual=1", (code,)).fetchone()
     if row is None or conn.execute("SELECT 1 FROM users WHERE id=?", (uid,)).fetchone() is None:
         return False
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ts = ts_now()
     conn.execute("INSERT OR REPLACE INTO manual_awards (user_id, code, ts, context) VALUES (?,?,?,?)",
                  (uid, code, ts, context))
     conn.commit()

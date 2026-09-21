@@ -50,6 +50,43 @@ tocchiamo lo storico: rigiriamo il motore.
 - **Altitudine stimata** da DEM (SRTM / open-elevation) a partire da lat/lon, con
   `alt_source='dem'`. Il pin non porta quota; siamo onesti sul fatto che sia derivata.
 
+### 3bis. L'orologio
+
+**Ogni timestamp in tabella è ora locale italiana, senza fuso scritto.** Lo erano già
+i 599 depositi importati da WhatsApp, che portano l'ora com'era battuta in chat, e un
+badge che dice «fra mezzanotte e le 5» parla dell'orologio in bagno, non di un istante
+assoluto sulla linea del tempo.
+
+Il fuso sta scritto **nel codice** (`util.ROME`) e non nell'ambiente. Non è pignoleria:
+se il significato di un dato già salvato dipende da una variabile d'ambiente, un
+redeploy che la perde cambia il senso di ottomila righe senza che niente segnali un
+errore. `TZ=Europe/Rome` c'è lo stesso nel compose, ma serve ai log e ai `DEFAULT
+(datetime('now'))` rimasti nel DDL, non al gioco.
+
+Tre regole operative:
+
+- **Mai `datetime.now()` nudo**: segue il fuso del processo. Si usa `util.now_local()`.
+- **Mai il `datetime('now')` di SQLite** dove il valore si confronterà con un
+  `deposits.ts`: quello è UTC sempre, in qualunque container. Si passa `util.ts_now()`
+  dal Python. Restano DDL con quel default sulle colonne di solo audit (`created_at`,
+  `geocoded_at`), dove un'ora di scarto non decide niente.
+- **I secondi Unix di Telegram sono un istante assoluto** e vanno convertiti a Roma
+  esplicitamente (`util.local_from_epoch`), non con `fromtimestamp()` nudo.
+
+> **Come si è scoperto, il 21 set 2026.** Il container girava senza `TZ`, quindi in UTC,
+> e `_msg_ts` del bot convertiva con `fromtimestamp()` nudo: **809 depositi salvati due
+> ore indietro**, più della metà del database. Non l'ha segnalato nessun errore, l'ha
+> detto l'istogramma delle ore: in otto anni di WhatsApp ci sono **2** cacate fra le 4 e
+> le 6 del mattino, nei due mesi e mezzo del bot ce n'erano **172**. Le due curve hanno la
+> stessa forma, traslata. Danno collaterale: **133 "Alba del Nuovo Regno" su 135** erano
+> andate a gente che cagava alle 7 passate, e il recap della domenica partiva alle 22:00
+> per il gruppo perché il cron leggeva le 20:00 di Greenwich. Il cron adesso prova a
+> entrambe le ore UTC possibili (18 d'estate, 19 d'inverno) con una guardia
+> `[ "$(TZ=Europe/Rome date +%H)" = "20" ]`, e non con `CRON_TZ`: quello è di cronie e
+> **questo cron non lo onora**, provato con una sonda che non scattava mentre il
+> controllo senza CRON_TZ scattava. L'alternativa era cambiare il fuso della macchina,
+> che avrebbe spostato anche i quattro job di borant-backup nello stesso crontab.
+
 ---
 
 ## 4. Leaderboard principale — controllo territori

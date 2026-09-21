@@ -20,7 +20,7 @@ import sqlite3
 from pathlib import Path
 
 from . import config, visibilita
-from .util import is_video
+from .util import is_video, ts_now
 
 
 def open_vote_week(conn: sqlite3.Connection) -> dict | None:
@@ -103,8 +103,8 @@ def cast_vote(conn: sqlite3.Connection, week_id: int, deposit_id: int,
         """INSERT INTO selfie_votes (week_id, deposit_id, voter_id, score)
            VALUES (?,?,?,?)
            ON CONFLICT(week_id, deposit_id, voter_id) DO UPDATE SET
-             score=excluded.score, ts=datetime('now')""",
-        (week_id, deposit_id, voter_id, score))
+             score=excluded.score, ts=?""",
+        (week_id, deposit_id, voter_id, score, ts_now()))
     conn.commit()
     return True
 
@@ -160,7 +160,7 @@ def elect(conn: sqlite3.Connection, week_id: int, *, now: str | None = None) -> 
         if len(rivals) == 1:
             winner = top
     conn.execute(
-        "UPDATE weeks SET face_deposit_id=?, face_closed_at=COALESCE(?, datetime('now')) WHERE id=?",
-        (winner["deposit_id"] if winner else None, now, week_id))
+        "UPDATE weeks SET face_deposit_id=?, face_closed_at=COALESCE(?, ?) WHERE id=?",
+        (winner["deposit_id"] if winner else None, now, ts_now(), week_id))
     conn.commit()
     return winner

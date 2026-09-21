@@ -55,7 +55,10 @@ def domenica(monkeypatch):
     che ritorna, non a `datetime.now()`."""
     quando = datetime(2026, 9, 20, 20, 0, 0)     # domenica, ora del cron
     from conquisterco import weeks
-    monkeypatch.setattr(weeks, "datetime", SimpleNamespace(now=lambda: quando))
+    # si ferma `now_local` e non `datetime`: dal 21 set 2026 l'orologio del
+    # gioco e' esplicitamente quello di Roma (util.ROME) e non quello del
+    # processo, quindi `weeks` non chiama piu' `datetime.now()`.
+    monkeypatch.setattr(weeks, "now_local", lambda: quando)
     return quando
 
 

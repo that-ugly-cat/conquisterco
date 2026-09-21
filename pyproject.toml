@@ -5,14 +5,26 @@ description = "Il Cacasto — territory-control mondiale a base fecale (motore d
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0-or-later" }
-dependencies = []
-# Fase 1 gira su sola stdlib (sqlite3). Le dipendenze pesanti arrivano dopo:
+dependencies = ["tzdata>=2024.1"]
+# `tzdata` non e' una libreria ma il database dei fusi orari: `zoneinfo` e'
+# stdlib, i suoi dati no. Su Linux li trova in /usr/share/zoneinfo, su Windows
+# non esistono e `ZoneInfo("Europe/Rome")` solleva. Il motore ha bisogno del
+# fuso di Roma (util.ROME), quindi senza questo pacchetto il progetto gira sul
+# VPS e non sulla macchina di Spit.
+# Il resto della Fase 1 gira su sola stdlib (sqlite3). Le dipendenze pesanti:
 #   geo reale  → shapely, pyproj   (point-in-polygon su poligoni OSM)
 #   dashboard  → fastapi, uvicorn, jinja2
 #   bot        → python-telegram-bot
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "httpx2>=0.28"]   # httpx2: il TestClient di starlette 1.x lo vuole cosi
+dev = [
+    "pytest>=8",
+    "httpx2>=0.28",   # il TestClient di starlette 1.x lo vuole cosi
+    # ...e importa comunque `httpx`. Mancava, e stava nel venv solo di
+    # rimbalzo: il 21 set 2026 un `uv sync` pulito l'ha tolto e sedici test
+    # delle rotte hanno iniziato a SALTARE invece di fallire, che e' peggio.
+    "httpx>=0.28",
+]
 web = [
     "fastapi==0.139.0",
     "starlette==1.3.1",

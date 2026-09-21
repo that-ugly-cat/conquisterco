@@ -22,7 +22,6 @@ import sqlite3
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime
 from pathlib import Path
 
 from ..achievements import REGISTRY
@@ -31,7 +30,7 @@ from ..enrich_osm import enrich_deposits_osm
 from ..ingest import add_deposit
 from ..pipeline import finalize
 from .. import faces, visibilita, weeks
-from ..util import is_video, parse_ts
+from ..util import fmt_ts, is_video, local_from_epoch, parse_ts
 from . import data, triggers
 from .translations import TRANSLATIONS
 
@@ -241,7 +240,11 @@ def broadcast(text: str, client: "TelegramClient | None" = None) -> tuple[bool, 
 # ---------------------------------------------------------------------------
 
 def _msg_ts(msg: dict) -> str:
-    return datetime.fromtimestamp(msg.get("date", 0)).strftime("%Y-%m-%d %H:%M:%S")
+    """L'ora italiana del messaggio. Telegram manda secondi Unix, cioe' un
+    istante assoluto: `datetime.fromtimestamp()` nudo lo ancora al fuso del
+    processo, e il processo gira in UTC — e' cosi' che 809 depositi sono
+    finiti in tabella due ore indietro."""
+    return fmt_ts(local_from_epoch(msg.get("date", 0)))
 
 
 def _within(a: str, b: str) -> bool:

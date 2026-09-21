@@ -21,6 +21,7 @@ from ..geo import FakeGeocoder
 from ..geo_osm import OSMResolver
 from ..pipeline import run_all
 from ..seed import build_world, seed_deposits
+from ..util import ts_now
 from . import bot, data
 from .auth import hash_password, verify_password
 from .translations import SUPPORTED_LANGUAGES, get_lang, get_t
@@ -509,13 +510,15 @@ def me_stitico(request: Request, stitico: str = Form(None), conn=Depends(get_db)
     uid = request.session["uid"]
     on = bool(stitico)
     cur = conn.execute("SELECT stitico FROM users WHERE id=?", (uid,)).fetchone()
+    # `ts_now()` e non il `datetime('now')` di SQLite, che e' sempre UTC: questi
+    # due estremi vengono confrontati con i `deposits.ts`, che sono ora locale.
     if on and not cur["stitico"]:
         conn.execute(
-            "INSERT INTO stitico_periods (user_id, from_ts) VALUES (?, datetime('now'))", (uid,))
+            "INSERT INTO stitico_periods (user_id, from_ts) VALUES (?, ?)", (uid, ts_now()))
     elif not on and cur["stitico"]:
         conn.execute(
-            """UPDATE stitico_periods SET to_ts = datetime('now')
-               WHERE user_id=? AND to_ts IS NULL""", (uid,))
+            """UPDATE stitico_periods SET to_ts = ?
+               WHERE user_id=? AND to_ts IS NULL""", (ts_now(), uid))
     conn.execute("UPDATE users SET stitico=? WHERE id=?", (int(on), uid))
     conn.commit()
     return RedirectResponse("/me", status_code=303)
