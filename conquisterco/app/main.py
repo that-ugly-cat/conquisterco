@@ -585,22 +585,23 @@ def media_flag(uid: int, conn=Depends(get_db)):
 # --- Admin (gestione utenti) ----------------------------------------------
 
 def _admin_view(request: Request, conn, *, sent: str = "", perche: str = "",
-                bozza: str = ""):
+                bozza: str = "", pw_di: str = ""):
     """Rende il pannello. `bozza` ripopola la casella del messaggio: dopo un
     invio fallito il testo deve tornare indietro, non sparire — il 19 set 2026
     un annuncio di cinquemila caratteri e' andato perso così, per un rifiuto
     di Telegram e un redirect."""
     return templates.TemplateResponse(request, "admin.html", _ctx(
         request, users=data.list_users(conn), me=request.session.get("name"),
-        bot_ok=bot.bot_enabled(), sent=sent, perche=perche, bozza=bozza,
+        bot_ok=bot.bot_enabled(), sent=sent, perche=perche, bozza=bozza, pw_di=pw_di,
         manual_badges=data.manual_badges(conn),
         manual_assignments=data.manual_assignments(conn)))
 
 
 @app.get("/admin", response_class=HTMLResponse)
-def admin_page(request: Request, sent: str = "", perche: str = "", conn=Depends(get_db)):
+def admin_page(request: Request, sent: str = "", perche: str = "", pw: str = "",
+               conn=Depends(get_db)):
     require_admin(request)
-    return _admin_view(request, conn, sent=sent, perche=perche)
+    return _admin_view(request, conn, sent=sent, perche=perche, pw_di=pw)
 
 
 @app.post("/admin/badge")
@@ -658,7 +659,12 @@ def admin_reset(request: Request, user_id: int = Form(...),
     conn.execute("UPDATE users SET password_hash=? WHERE id=?",
                  (hash_password(password), user_id))
     conn.commit()
-    return RedirectResponse("/admin", status_code=303)
+    # il nome torna indietro nell'indirizzo solo per il toast: cambiare una
+    # password senza che lo schermo dica niente e' il modo migliore per farlo
+    # due volte, o per crederlo fatto sulla riga sbagliata
+    r = conn.execute("SELECT display_name FROM users WHERE id=?", (user_id,)).fetchone()
+    q = urllib.parse.urlencode({"pw": r["display_name"] if r else ""})
+    return RedirectResponse("/admin?" + q, status_code=303)
 
 
 @app.post("/admin/role")

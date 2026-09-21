@@ -22,20 +22,46 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
 .privacy-list{list-style:none;padding:0;margin:1rem 0}
 .privacy-list li{padding:.55rem 0;border-bottom:1px solid var(--line);line-height:1.45}
 
-.admin-wrap{max-width:900px;margin:1.2rem auto;padding:0 1rem}
+.admin-wrap{max-width:1040px;margin:1.2rem auto;padding:0 1rem}
 .admin-wrap h2{color:var(--brown-d)}
 .admin-table{background:var(--paper);border:1px solid var(--line);border-radius:8px}
-.admin-table td,.admin-table th{padding:.5rem .6rem}
-.admin-actions{display:flex;gap:.5rem;flex-wrap:wrap}
-.admin-actions form{display:flex;gap:.3rem}
+.admin-table td,.admin-table th{padding:.5rem .45rem;vertical-align:middle}
+/* il nome col suo quadratino non si spezza su due righe, e la colonna azioni
+   prende solo lo spazio che le serve: e' cosi' che le righe restano alte uguali */
+.admin-table td:first-child,.admin-table td.acts{white-space:nowrap}
+.admin-table td.acts{width:1%}
+.admin-actions{display:flex;gap:.5rem;flex-wrap:nowrap;align-items:center;justify-content:flex-end}
+.admin-actions form{display:flex;gap:.3rem;align-items:center}
+.admin-actions input[type=password]{flex:0 1 8rem;min-width:5rem}
+/* i due bottoni di ruolo hanno testi di lunghezza diversa: senza una
+   larghezza minima la riga dell'admin si disallinea da tutte le altre */
+.admin-actions form:last-child button{min-width:6.4rem}
 .admin-actions input,.admin-create input,.admin-create select{padding:.3rem .5rem;border:1px solid var(--line);border-radius:5px}
 .admin-actions button,.admin-create button{padding:.3rem .6rem;border:0;border-radius:5px;background:var(--accent);color:#fff;cursor:pointer}
+/* se proprio non ci sta, a scorrere e' la tabella e non la pagina */
+.table-scroll{overflow-x:auto}
 .admin-create{display:flex;gap:.5rem;flex-wrap:wrap;background:var(--paper);padding:.8rem;border:1px solid var(--line);border-radius:8px}
 .admin-bc{display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-start;background:var(--paper);padding:.8rem;border:1px solid var(--line);border-radius:8px}
 .admin-bc textarea{flex:1;min-width:240px;padding:.4rem .5rem;border:1px solid var(--line);border-radius:5px;font:inherit;resize:vertical}
 .admin-bc button{padding:.4rem .7rem;border:0;border-radius:5px;background:var(--accent);color:#fff;cursor:pointer}
 .bc-ok{color:#2e7d32;font-weight:600}
 .bc-err{color:#c0392b;font-weight:600}
+/* Il toast compare e se ne va da solo, in CSS: con un requestAnimationFrame
+   in una scheda che non sta disegnando la classe non arriva mai e la conferma
+   non si vede: verificato il 21 set 2026, quattro secondi a opacita' zero. */
+.toast{position:fixed;left:50%;bottom:1.4rem;
+  background:var(--brown-d);color:var(--cream);padding:.6rem 1rem;border-radius:8px;
+  box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:.9rem;z-index:9999;
+  pointer-events:none;opacity:0;transform:translate(-50%,.5rem);
+  animation:toast 3.8s ease forwards}
+@keyframes toast{
+  0%{opacity:0;transform:translate(-50%,.5rem)}
+  6%,86%{opacity:1;transform:translate(-50%,0)}
+  100%{opacity:0;transform:translate(-50%,.5rem)}
+}
+@media(prefers-reduced-motion:reduce){
+  .toast{animation-duration:3.8s;animation-timing-function:steps(1,end)}
+}
 .card form.login-page{display:block}
 .card form.login-page input,.card form.login-page button{display:block;width:100%;margin-bottom:.5rem}
 .card form.login-page button{margin-bottom:0;padding:.5rem}
@@ -111,8 +137,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:.55
   .prof-grid{grid-template-columns:1fr}
   .stat-grid{grid-template-columns:repeat(2,1fr)}
   .img-row{flex-direction:column}
-  .admin-actions{flex-direction:column;align-items:stretch}
-  .admin-table,.admin-create{overflow-x:auto}
+  .admin-create{overflow-x:auto}
 }
 
 main{display:flex;height:calc(100% - 52px)}

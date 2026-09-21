@@ -38,7 +38,7 @@
     {% endif %}
 
     <h2>{{ T.adm_users }}</h2>
-    <table class="admin-table">
+    <div class="table-scroll"><table class="admin-table">
       <tr><th>{{ T.th_player }}</th><th>{{ T.adm_public }}</th><th>{{ T.adm_telegram }}</th><th>{{ T.adm_role }}</th><th>{{ T.adm_deposits }}</th><th>{{ T.adm_password }}</th><th>{{ T.adm_actions }}</th></tr>
       {% for u in users %}
       <tr>
@@ -48,7 +48,7 @@
         <td>{{ u.role }}</td>
         <td class="num">{{ u.deposits }}</td>
         <td>{{ "✓" if u.has_password else "—" }}</td>
-        <td class="admin-actions">
+        <td class="acts"><div class="admin-actions">
           <form method="post" action="/admin/reset">
             <input type="hidden" name="user_id" value="{{ u.id }}">
             <input type="password" name="password" placeholder="{{ T.adm_new_pw }}" required>
@@ -59,10 +59,10 @@
             <input type="hidden" name="role" value="{{ 'user' if u.role == 'admin' else 'admin' }}">
             <button>{{ T.adm_make_user if u.role == 'admin' else T.adm_make_admin }}</button>
           </form>
-        </td>
+        </div></td>
       </tr>
       {% endfor %}
-    </table>
+    </table></div>
 
     <h2>{{ T.adm_new_user }}</h2>
     <form method="post" action="/admin/create" class="admin-create">
@@ -99,19 +99,27 @@
       <tr>
         <td>{{ m.user }}</td>
         <td>{{ m.icon or '🏅' }} {{ m.badge or m.code }}</td>
-        <td class="admin-actions">
+        <td class="acts"><div class="admin-actions">
           <form method="post" action="/admin/badge">
             <input type="hidden" name="action" value="revoke">
             <input type="hidden" name="user_id" value="{{ m.user_id }}">
             <input type="hidden" name="code" value="{{ m.code }}">
             <button class="btn-danger">{{ T.adm_badge_revoke }}</button>
           </form>
-        </td>
+        </div></td>
       </tr>
       {% endfor %}
     </table>
     {% else %}<p class="muted">{{ T.adm_badge_none }}</p>{% endif %}
     {% else %}<p class="muted">{{ T.adm_badge_nomanual }}</p>{% endif %}
   </div>
+
+  {% if pw_di %}<div class="toast" id="toast">✓ {{ T.adm_pw_done }} {{ pw_di }}</div>{% endif %}
+  <script>
+    // Comparsa e sparizione stanno nel CSS. Qui si toglie solo il parametro
+    // dall'indirizzo: senza, un refresh riannuncia una password cambiata
+    // cinque minuti fa.
+    if (document.getElementById('toast')) history.replaceState({}, '', location.pathname);
+  </script>
 </body>
 </html>

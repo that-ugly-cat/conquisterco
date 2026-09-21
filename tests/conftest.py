@@ -57,3 +57,49 @@ def domenica(monkeypatch):
     from conquisterco import weeks
     monkeypatch.setattr(weeks, "datetime", SimpleNamespace(now=lambda: quando))
     return quando
+
+
+# --- l'app vera, per i test sulle rotte ------------------------------------
+
+PW_TEST = "cacca-segreta"
+
+
+@pytest.fixture(scope="session")
+def web(tmp_path_factory):
+    """Il modulo `app.main` avviato su un database usa-e-getta.
+
+    Le rotte si provano solo a livello HTTP: un redirect, un 401 e un toast non
+    sono funzioni. `main` legge database e cartella media **all'import**, quindi
+    l'ambiente va preparato prima di importarlo — ed e' la ragione per cui vive
+    qui dentro e non in cima al file.
+
+    Si salta senza fastapi e httpx (extra `web`), cosi' `uv run --extra dev
+    pytest` resta verde."""
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    import os
+    d = tmp_path_factory.mktemp("web")
+    os.environ["CONQUISTERCO_DB"] = str(d / "test.db")
+    os.environ["CONQUISTERCO_MEDIA"] = str(d / "media")
+    os.environ["CONQUISTERCO_DEMO"] = "0"
+    os.environ["CONQUISTERCO_SECRET"] = "chiave-di-test"
+    from conquisterco.app import main
+    from conquisterco.app.auth import hash_password
+    c = main.connect(main.DB_PATH)
+    for nome, ruolo in (("Tizio", "user"), ("Capo", "admin")):
+        c.execute("INSERT OR IGNORE INTO users (display_name, password_hash, role)"
+                  " VALUES (?,?,?)", (nome, hash_password(PW_TEST), ruolo))
+    c.commit()
+    c.close()
+    return main
+
+
+@pytest.fixture
+def client(web):
+    from starlette.testclient import TestClient
+    with TestClient(web.app, follow_redirects=False) as c:
+        yield c
+
+
+def entra(client, nome, pw=PW_TEST, next=""):
+    return client.post("/login", data={"username": nome, "password": pw, "next": next})
