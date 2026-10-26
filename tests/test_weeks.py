@@ -5,7 +5,6 @@ congela il recap: sono le due cose che questi test tengono ferme.
 """
 
 from datetime import datetime, timedelta
-from types import SimpleNamespace
 
 from conquisterco import config, weeks
 from conquisterco.ingest import add_user
@@ -194,8 +193,14 @@ def test_il_recap_chiude_la_settimana_proclama_e_riapre(conn, geo, monkeypatch, 
     faces.cast_vote(conn, aperta["id"], dbid, c, 3)
 
     dopo = now + timedelta(days=7)
-    # una settimana avanti: weeks usa datetime solo per now()
-    monkeypatch.setattr(weeks, "datetime", SimpleNamespace(now=lambda: dopo))
+    # Una settimana avanti, su tutti gli orologi che il recap legge: `weeks`
+    # per chiudere la settimana, `data` per la finestra di chi e' attivo. E si
+    # sposta `now_local` e non `datetime`, che dal 21 set 2026 `weeks` non
+    # chiama piu' (`util.ROME`): la patch vecchia su `weeks.datetime` non
+    # spostava niente ed era rimasta li' a sembrare che lo facesse.
+    from conquisterco.app import data
+    for modulo in (weeks, data):
+        monkeypatch.setattr(modulo, "now_local", lambda: dopo)
     tg2 = FakeTG()
     assert bot.send_weekly_recap(conn, tg2, media_dir=tmp_path)
     assert "Faccia di merda della settimana scorsa" in tg2.sent[0][1]

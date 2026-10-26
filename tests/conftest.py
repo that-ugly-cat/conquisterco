@@ -51,14 +51,25 @@ def domenica(monkeypatch):
     cadono in fila. Scoperto il 21 settembre 2026, un lunedi' mattina, su test
     scritti il venerdi' e verdi per tre giorni.
 
+    Si fermano **tutti** gli orologi che il recap legge, e non solo quello di
+    `weeks`: `data.weekly_recap` chiama `now_local()` per sapere chi e' attivo
+    (>=1 deposito negli ultimi 30 giorni), e con quello libero i depositi
+    datati su questa domenica finta smettono di contare appena il calendario
+    vero ci passa sopra di un mese. Allora `ranked` e `slackers` sono vuoti, il
+    recap non ha niente da dire e torna None: il test del recap completo e'
+    caduto cosi' il 26 ottobre 2026, trentasei giorni dopo il 20 settembre,
+    senza che nessuno avesse toccato una riga.
+
     Chi usa questa fixture deve datare i propri depositi rispetto all'istante
     che ritorna, non a `datetime.now()`."""
     quando = datetime(2026, 9, 20, 20, 0, 0)     # domenica, ora del cron
     from conquisterco import weeks
+    from conquisterco.app import data
     # si ferma `now_local` e non `datetime`: dal 21 set 2026 l'orologio del
     # gioco e' esplicitamente quello di Roma (util.ROME) e non quello del
     # processo, quindi `weeks` non chiama piu' `datetime.now()`.
-    monkeypatch.setattr(weeks, "now_local", lambda: quando)
+    for modulo in (weeks, data):
+        monkeypatch.setattr(modulo, "now_local", lambda: quando)
     return quando
 
 
