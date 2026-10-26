@@ -8,7 +8,7 @@ import urllib.parse
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.exception_handlers import http_exception_handler
@@ -22,7 +22,7 @@ from ..geo_osm import OSMResolver
 from ..pipeline import run_all
 from ..seed import build_world, seed_deposits
 from ..util import ts_now
-from . import bot, data
+from . import bot, data, export
 from .auth import hash_password, verify_password
 from .translations import SUPPORTED_LANGUAGES, get_lang, get_t
 
@@ -704,6 +704,18 @@ def admin_merge(request: Request, from_user: int = Form(...),
     nomi = (_nome(conn, from_user), _nome(conn, into_user))
     data.merge_users(conn, from_user, into_user)   # unisce from_user in into_user
     return _fatto("merge", nomi[0], nomi[1])       # il primo non esiste piu': il nome si prende prima
+
+
+@app.get("/admin/export")
+def admin_export(request: Request, conn=Depends(get_db)):
+    """Lo zip con le tre tabelle, piene e anonimizzate (vedi `export.py`).
+
+    Un GET e non un POST perche' non cambia niente: e' uno scarico, e il
+    browser deve poterlo rifare col tasto indietro senza riconferme."""
+    require_admin(request)
+    blob = export.build_zip(conn)
+    return Response(blob, media_type="application/zip", headers={
+        "Content-Disposition": f'attachment; filename="{export.nome_file()}"'})
 
 
 # --- Bot Telegram ----------------------------------------------------------

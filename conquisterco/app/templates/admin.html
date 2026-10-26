@@ -112,6 +112,11 @@
     </table>
     {% else %}<p class="muted">{{ T.adm_badge_none }}</p>{% endif %}
     {% else %}<p class="muted">{{ T.adm_badge_nomanual }}</p>{% endif %}
+
+    <h2>{{ T.adm_exp_title }}</h2>
+    <p class="muted">{{ T.adm_exp_hint }}</p>
+    <p class="muted">{{ T.adm_exp_warn }}</p>
+    <p><a href="/admin/export"><button>{{ T.adm_exp_btn }}</button></a></p>
   </div>
 
   {% set ricevute = {

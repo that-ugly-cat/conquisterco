@@ -218,6 +218,11 @@ TRANSLATIONS = {
         "adm_badge_revoke": "revoca",
         "adm_badge_none": "Nessun badge speciale assegnato.",
         "adm_badge_nomanual": "Nessun badge assegnabile a mano.",
+        # export dei dati
+        "adm_exp_title": "Scarica i dati",
+        "adm_exp_hint": "Uno zip con cacate, settimane e badge in CSV, ognuna anche in versione anonima: pseudonimo al posto del nome, niente coordinate né riferimenti ai selfie, data senza ora.",
+        "adm_exp_warn": "I file anonimi sono anonimi per chi riceve solo quelli: nello zip ci sono anche quelli pieni, e le righe hanno gli stessi id. Fuori dal gruppo manda solo gli anonimi.",
+        "adm_exp_btn": "Scarica lo zip",
         # privacy
         "priv_title": "La privacy, in due parole 🔒",
         "priv_intro": "Niente giri di parole: ecco cosa succede ai tuoi dati.",
@@ -483,6 +488,10 @@ TRANSLATIONS = {
         "adm_badge_revoke": "revoke",
         "adm_badge_none": "No special badges assigned yet.",
         "adm_badge_nomanual": "No hand-assignable badges.",
+        "adm_exp_title": "Download the data",
+        "adm_exp_hint": "A zip with dumps, weeks and badges as CSV, each one also in an anonymous cut: a pseudonym instead of the name, no coordinates, no selfie references, date without the time.",
+        "adm_exp_warn": "The anonymous files are anonymous to whoever gets only those: this zip also holds the full ones, and the rows share the same ids. Outside the group, send the anonymous files only.",
+        "adm_exp_btn": "Download the zip",
         "priv_title": "Privacy, in a nutshell 🔒",
         "priv_intro": "No fluff: here's what happens to your data.",
         "priv_1": "🎮 <b>It's a game among friends.</b> Not a product, no ads, we don't sell or share anything with anyone.",
